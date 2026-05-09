@@ -1,0 +1,8 @@
+query GetBasicViewer {
+    Viewer {
+        name
+        options {
+            displayAdultContent
+        }
+    }
+}
