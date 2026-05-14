@@ -2,6 +2,7 @@ mod content;
 mod header;
 mod main_frame;
 mod sidebar;
+mod footer;
 
 use crate::app::App;
 use ratatui::prelude::*;
@@ -19,4 +20,6 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
     header::draw(frame, chunks[0], app);
 
     main_frame::draw(frame, chunks[1], app);
+
+    footer::draw(frame, chunks[2], app);
 }

@@ -15,11 +15,11 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
 
     let center = Layout::default()
         .direction(Direction::Horizontal)
-        .spacing(Spacing::Overlap(1))
+        // .spacing(Spacing::Overlap(1))
         .constraints([
-            Constraint::Percentage(16),
-            Constraint::Percentage(42),
-            Constraint::Percentage(42),
+            Constraint::Min(15),
+            Constraint::Fill(3),
+            Constraint::Fill(3),
         ])
         .split(inner_main_area);
 

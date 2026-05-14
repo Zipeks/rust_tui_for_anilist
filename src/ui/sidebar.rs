@@ -1,4 +1,4 @@
-use crate::app::App;
+use crate::app::{ActiveBlock, App};
 use ratatui::{prelude::*, widgets::*};
 
 pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
@@ -9,7 +9,8 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
 
     let sidebar_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(100)])
+        .constraints([
+            Constraint::Min(0)])
         .split(inner_sidebar_area);
 
     let items: Vec<ListItem> = app
@@ -27,6 +28,14 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
         .collect();
 
     let list = List::new(items)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(match app.active_block {
+                    ActiveBlock::Sidebar => Style::default().fg(Color::Cyan),
+                    _ => Style::default().fg(Color::DarkGray),
+                }).border_type(BorderType::Rounded),
+        )
         .highlight_symbol("> ".red())
         .highlight_style(Style::default().yellow())
         .repeat_highlight_symbol(true)

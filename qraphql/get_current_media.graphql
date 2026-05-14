@@ -7,7 +7,10 @@ query GetCurrentMedia($userId: Int, $status: MediaListStatus) {
           userPreferred
         }
         type
+        episodes
+        chapters
       }
+      progress
     }
   }
 }

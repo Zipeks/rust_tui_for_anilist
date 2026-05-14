@@ -51,6 +51,29 @@ impl User {
         &self.name
     }
 }
+#[derive(Clone, Copy, PartialEq)]
+pub enum MediaTab {
+    Anime,
+    Manga,
+}
+
+impl MediaTab {
+    pub fn next(&self) -> Self {
+        match self {
+            MediaTab::Anime => MediaTab::Manga,
+            MediaTab::Manga => MediaTab::Anime,
+        }
+    }
+
+    pub fn previous(&self) -> Self {
+        self.next()
+    }
+}
+#[derive(Clone, Debug)]
+pub struct MediaItem {
+    pub id: i64,
+    pub title: String,
+}
 
 pub struct App {
     pub active_block: ActiveBlock,
@@ -63,7 +86,9 @@ pub struct App {
     pub error_message: Option<String>,
 
     pub current_media: Option<get_current_media::ResponseData>,
-    pub current_media_state: ListState,
+    pub active_tab: MediaTab,
+    pub anime_state: ListState,
+    pub manga_state: ListState,
 }
 
 impl App {
@@ -87,111 +112,51 @@ impl App {
 
             error_message: None,
             current_media: None,
-            current_media_state: ListState::default(),
+            active_tab: MediaTab::Anime,
+            anime_state: ListState::default(),
+            manga_state: ListState::default(),
         }
     }
 
-    fn get_media_counts(&self) -> (usize, usize) {
-        if let Some(ref data) = self.current_media {
-            let raw_list = data
-                .page
-                .as_ref()
-                .and_then(|p| p.media_list.as_ref())
-                .map(|l| l.iter().flatten().collect::<Vec<_>>())
-                .unwrap_or_default();
-
-            let a = raw_list
-                .iter()
-                .filter(|m| {
-                    m.media.as_ref().map_or(false, |med| {
-                        med.type_ == Some(get_current_media::MediaType::ANIME)
-                    })
-                })
-                .count();
-
-            let m = raw_list
-                .iter()
-                .filter(|m| {
-                    m.media.as_ref().map_or(false, |med| {
-                        med.type_ == Some(get_current_media::MediaType::MANGA)
-                    })
-                })
-                .count();
-
-            (a, m)
-        } else {
-            (0, 0)
-        }
-    }
-    fn get_selectable_indices(&self) -> Vec<usize> {
-        let (a_count, m_count) = self.get_media_counts();
-        let mut selectables = Vec::new();
-        let mut current_idx = 0;
-
-        if a_count > 0 {
-            current_idx += 1;
-            for _ in 0..a_count {
-                selectables.push(current_idx);
-                current_idx += 1;
-            }
-        }
-
-        if m_count > 0 {
-            if a_count > 0 {
-                current_idx += 1;
-            }
-            current_idx += 1;
-            for _ in 0..m_count {
-                selectables.push(current_idx);
-                current_idx += 1;
-            }
-        }
-        selectables
-    }
-    pub fn next_center_item(&mut self) {
-        let selectables = self.get_selectable_indices();
-        if selectables.is_empty() {
-            return;
-        }
-
-        let current_selected = self.current_media_state.selected().unwrap_or(0);
-
-        let next_idx = match selectables.iter().position(|&i| i == current_selected) {
-            Some(pos) => {
-                if pos >= selectables.len() - 1 {
-                    selectables[0]
-                } else {
-                    selectables[pos + 1]
-                }
-            }
-            None => selectables[0],
+    pub fn get_current_tab_items(&self) -> Vec<MediaItem> {
+        let Some(ref data) = self.current_media else {
+            return vec![];
         };
 
-        self.current_media_state.select(Some(next_idx));
-    }
+        let raw_list = data
+            .page
+            .as_ref()
+            .and_then(|p| p.media_list.as_ref())
+            .map(|l| l.iter().flatten().collect::<Vec<_>>())
+            .unwrap_or_default();
 
-    pub fn previous_center_item(&mut self) {
-        let selectables = self.get_selectable_indices();
-        if selectables.is_empty() {
-            return;
-        }
-
-        let current_selected = self.current_media_state.selected().unwrap_or(0);
-
-        let prev_idx = match selectables.iter().position(|&i| i == current_selected) {
-            Some(pos) => {
-                if pos == 0 {
-                    *selectables.last().unwrap()
-                } else {
-                    selectables[pos - 1]
-                }
-            }
-            None => selectables[0],
+        let target_type = match self.active_tab {
+            MediaTab::Anime => get_current_media::MediaType::ANIME,
+            MediaTab::Manga => get_current_media::MediaType::MANGA,
         };
 
-        self.current_media_state.select(Some(prev_idx));
-    }
+        raw_list
+            .into_iter()
+            .filter(|m| {
+                m.media.as_ref().map_or(
+                    false,
+                    |med| matches!(med.type_, Some(ref t) if *t == target_type),
+                )
+            })
+            .map(|m| {
+                let title = m
+                    .media
+                    .as_ref()
+                    .and_then(|med| med.title.as_ref())
+                    .and_then(|t| t.user_preferred.clone())
+                    .unwrap_or_else(|| "Unknown".into());
 
+                let id = m.media.as_ref().map(|med| med.id).unwrap_or(0);
+
+                MediaItem { id, title }
+            })
+            .collect()
+    }
     pub fn next_sidebar_item(&mut self) {
         let i = match self.sidebar_state.selected() {
             Some(i) => {
@@ -218,6 +183,56 @@ impl App {
             None => 0,
         };
         self.sidebar_state.select(Some(i));
+    }
+
+    pub fn next_center_item(&mut self) {
+        let count = self.get_current_tab_items().len();
+        if count == 0 {
+            return;
+        }
+
+        let state = match self.active_tab {
+            MediaTab::Anime => &mut self.anime_state,
+            MediaTab::Manga => &mut self.manga_state,
+        };
+
+        let i = match state.selected() {
+            Some(i) => {
+                if i >= count - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+
+        state.select(Some(i));
+    }
+
+    pub fn previous_center_item(&mut self) {
+        let count = self.get_current_tab_items().len();
+        if count == 0 {
+            return;
+        }
+
+        let state = match self.active_tab {
+            MediaTab::Anime => &mut self.anime_state,
+            MediaTab::Manga => &mut self.manga_state,
+        };
+
+        let i = match state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    count - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+
+        state.select(Some(i));
     }
 
     pub fn authenticated(&mut self, id: i64, name: String, allows_nsfw: Option<bool>) {
@@ -251,10 +266,8 @@ impl App {
                 match result {
                     Ok(data) => {
                         app.current_media = Some(data);
-                        let selectables = app.get_selectable_indices();
-                        if let Some(&first) = selectables.first() {
-                            app.current_media_state.select(Some(first));
-                        }
+                        app.anime_state.select_first();
+                        app.manga_state.select_first();
                     }
                     Err(e) => app.error_message = Some(e.to_string()),
                 }
@@ -288,8 +301,9 @@ pub fn run_app<B: Backend>(
     client: crate::anilist::AnilistClient,
     tx: Sender<AppAction>,
     rx: &Receiver<AppAction>,
-) -> io::Result<bool>  
-where std::io::Error: From<<B as Backend>::Error>
+) -> io::Result<bool>
+where
+    std::io::Error: From<<B as Backend>::Error>,
 {
     spawn_initial_viewer_fetch(client.clone(), tx.clone());
 
@@ -321,6 +335,7 @@ where std::io::Error: From<<B as Backend>::Error>
         }
     }
 }
+
 fn handle_sidebar_events(
     app: &mut App,
     key: KeyEvent,
@@ -334,7 +349,7 @@ fn handle_sidebar_events(
         KeyCode::Char('l') | KeyCode::Enter => {
             if let Some(selected_idx) = app.sidebar_state.selected() {
                 app.current_view = app.sidebar_items[selected_idx];
-                app.current_media_state.select(Some(0));
+                // app.current_media_state.select(Some(0));
             }
             app.active_block = ActiveBlock::Center;
 
@@ -349,11 +364,36 @@ fn handle_sidebar_events(
 
 fn handle_center_events(app: &mut App, key: KeyEvent) {
     match key.code {
-        KeyCode::Char('h') | KeyCode::BackTab | KeyCode::Esc => {
-            app.active_block = ActiveBlock::Sidebar
+        KeyCode::Char('h') | KeyCode::Esc => app.active_block = ActiveBlock::Sidebar,
+
+        KeyCode::Char('[') => {
+            app.active_tab = app.active_tab.previous();
         }
+        KeyCode::Char(']') => {
+            app.active_tab = app.active_tab.next();
+        }
+
         KeyCode::Char('j') | KeyCode::Down => app.next_center_item(),
         KeyCode::Char('k') | KeyCode::Up => app.previous_center_item(),
+        KeyCode::Enter => {
+            let current_state = match app.active_tab {
+                MediaTab::Anime => &app.anime_state,
+                MediaTab::Manga => &app.manga_state,
+            };
+
+            if let Some(selected_index) = current_state.selected() {
+                let current_items = app.get_current_tab_items();
+
+                if selected_index < current_items.len() {
+                    let selected_id = current_items[selected_index].id;
+                    let selected_title = &current_items[selected_index].title;
+
+                    // Teraz możesz zmienić ekran na Details i wysłać zapytanie o to ID
+                    // np. app.fetch_anime_details(selected_id, tx);
+                    // app.active_block = ActiveBlock::Details;
+                }
+            }
+        }
         _ => {}
     }
 }
