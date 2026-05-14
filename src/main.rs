@@ -14,6 +14,7 @@ use std::{env, io};
 
 mod anilist;
 mod app;
+mod keybinds;
 mod ui;
 
 #[tokio::main]

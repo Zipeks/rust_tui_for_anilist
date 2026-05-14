@@ -1,8 +1,8 @@
 mod content;
+mod footer;
 mod header;
 mod main_frame;
 mod sidebar;
-mod footer;
 
 use crate::app::App;
 use ratatui::prelude::*;

@@ -9,21 +9,27 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
 
     let sidebar_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Min(0)])
+        .constraints([Constraint::Min(0)])
         .split(inner_sidebar_area);
 
     let items: Vec<ListItem> = app
         .sidebar_items
         .iter()
         .map(|view| {
-            let text = if *view == app.current_view {
-                format!("* {}", view.to_string())
-            } else {
-                format!("  {}", view.to_string())
-            };
+            // let text = if *view == app.current_view {
+            //     format!("● {}", view.to_string())
+            // } else {
+            //     format!("● {}", view.to_string())
+            // };
+            let text = Line::from(vec![
+                Span::styled("●", Style::default().fg(Color::Cyan)),
+                Span::styled(
+                    format!(" {}", view.to_string()),
+                    Style::default().fg(Color::White),
+                ),
+            ]);
 
-            ListItem::new(text)
+            ListItem::new(text).style(Style::default().fg(Color::Cyan))
         })
         .collect();
 
@@ -34,7 +40,8 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
                 .border_style(match app.active_block {
                     ActiveBlock::Sidebar => Style::default().fg(Color::Cyan),
                     _ => Style::default().fg(Color::DarkGray),
-                }).border_type(BorderType::Rounded),
+                })
+                .border_type(BorderType::Rounded),
         )
         .highlight_symbol("> ".red())
         .highlight_style(Style::default().yellow())

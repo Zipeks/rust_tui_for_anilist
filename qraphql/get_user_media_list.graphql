@@ -1,0 +1,28 @@
+query GetUserMediaList($userId: Int!, $status: MediaListStatus, $sort: [MediaListSort], $page: Int, $perPage: Int, $type: MediaType!) {
+  Page(page: $page, perPage: $perPage) {
+    pageInfo {
+      hasNextPage
+      currentPage
+      perPage
+      lastPage
+      total
+    }
+    mediaList(userId: $userId, status: $status, sort: $sort, type: $type) {
+      media {
+        id
+        title {
+          userPreferred
+        }
+        type
+        episodes
+        chapters
+        nextAiringEpisode {
+          episode
+          airingAt
+        }
+      }
+      progress
+      status
+    }
+  }
+}

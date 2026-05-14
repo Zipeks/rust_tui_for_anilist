@@ -1,4 +1,4 @@
-use crate::app::{App, ActiveBlock};
+use crate::app::{ActiveBlock, App};
 
 use ratatui::{prelude::*, widgets::*};
 
@@ -28,9 +28,8 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App) {
             _ => vec![],
         };
         keybinds
-    }      
-        )).left_aligned();
+    }))
+    .left_aligned();
 
     frame.render_widget(keybinds_info, area);
-
 }

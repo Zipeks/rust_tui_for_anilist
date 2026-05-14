@@ -2,6 +2,11 @@ use graphql_client::{GraphQLQuery, Response};
 use reqwest::{Client, header};
 use std::error::Error;
 
+use crate::anilist::{
+    get_current_media::{MediaListStatus, MediaType},
+    // get_media_list::MediaListSort,
+};
+
 #[derive(GraphQLQuery)]
 #[graphql(
     schema_path = "schema.json",
@@ -35,11 +40,21 @@ pub struct GetViewer;
     response_derives = "Debug"
 )]
 pub struct GetBasicViewer;
+
+#[derive(GraphQLQuery)]
+#[graphql(
+    schema_path = "schema.json",
+    query_path = "qraphql/get_user_media_list.graphql",
+    response_derives = "Debug, Clone"
+)]
+pub struct GetUserMediaList;
+
 #[derive(Clone)]
 pub struct AnilistClient {
     http_client: Client,
     api_url: &'static str,
 }
+
 impl AnilistClient {
     pub fn new(access_token: Option<&str>) -> Result<Self, Box<dyn Error + Sync + Send>> {
         let mut headers = header::HeaderMap::new();
@@ -142,6 +157,45 @@ impl AnilistClient {
             .await?;
 
         let response_body: Response<get_current_media::ResponseData> = res.json().await?;
+
+        if let Some(errors) = response_body.errors {
+            return Err(format!("GraphQL Error: {:?}", errors).into());
+        }
+
+        response_body.data.ok_or_else(|| "No data".into())
+    }
+
+    pub async fn get_user_media_list(
+        &self,
+        user_id: i64,
+        status: Option<get_user_media_list::MediaListStatus>,
+        sort: Option<Vec<get_user_media_list::MediaListSort>>, // Zostawiamy czystą sygnaturę!
+        page: Option<i64>,
+        per_page: Option<i64>,
+        type_: get_user_media_list::MediaType,
+    ) -> Result<get_user_media_list::ResponseData, Box<dyn std::error::Error + Sync + Send>> {
+        let mapped_sort = sort.map(|s| s.into_iter().map(Some).collect());
+
+        let variables = get_user_media_list::Variables {
+            user_id: user_id,
+            status: status,
+            sort: mapped_sort,
+            page: page,
+            per_page: per_page,
+            type_: type_,
+        };
+
+        let request_body = GetUserMediaList::build_query(variables);
+
+        let res = self
+            .http_client
+            .post(self.api_url)
+            .json(&request_body)
+            .send()
+            .await?;
+
+        let response_body: graphql_client::Response<get_user_media_list::ResponseData> =
+            res.json().await?;
 
         if let Some(errors) = response_body.errors {
             return Err(format!("GraphQL Error: {:?}", errors).into());

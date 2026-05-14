@@ -1,0 +1,3 @@
+Dodać details
+
+Przerobić zapytanie get_media, by było uniwersalnym typem wykorzystywanym przy każdym zapytaniu, jedynie podając różne parametry
