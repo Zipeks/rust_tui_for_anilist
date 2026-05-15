@@ -70,6 +70,8 @@ pub struct PageInfo {
     pub last_page: Option<i64>,
     pub has_next_page: Option<bool>,
 }
+use std::fmt::write;
+
 use ratatui::widgets::TableState;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -82,10 +84,20 @@ pub enum MediaStatus {
     Repeating,
     Unknown,
 }
-
 impl MediaStatus {
-    pub fn as_str(&self) -> &'static str {
-        match self {
+    pub const ALL: [MediaStatus; 6] = [
+        MediaStatus::Current,
+        MediaStatus::Planning,
+        MediaStatus::Completed,
+        MediaStatus::Dropped,
+        MediaStatus::Paused,
+        MediaStatus::Repeating,
+    ];
+}
+
+impl std::fmt::Display for MediaStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
             MediaStatus::Current => "Oglądane",
             MediaStatus::Planning => "W planach",
             MediaStatus::Completed => "Ukończone",
@@ -93,7 +105,8 @@ impl MediaStatus {
             MediaStatus::Paused => "Wstrzymane",
             MediaStatus::Repeating => "Oglądane ponownie",
             MediaStatus::Unknown => "Nieznany",
-        }
+        };
+        write!(f, "{}", s)
     }
 }
 use crate::anilist::get_user_media_list::{self, MediaListStatus};
@@ -131,11 +144,32 @@ pub struct MediaListItem {
     pub status: Option<MediaStatus>,
     pub next_airing_episode: Option<NextAiringEpisode>,
 }
+#[derive(PartialEq, Clone, Copy)]
 pub enum BrowseCategory {
     Trending,
     ThisSeason,
     NextSeason,
     SearchResults,
+}
+impl BrowseCategory {
+    pub const ALL: [BrowseCategory; 4] = [
+        BrowseCategory::Trending,
+        BrowseCategory::ThisSeason,
+        BrowseCategory::NextSeason,
+        BrowseCategory::SearchResults,
+    ];
+}
+
+impl std::fmt::Display for BrowseCategory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            BrowseCategory::Trending => "Trending",
+            BrowseCategory::ThisSeason => "Popular this season",
+            BrowseCategory::NextSeason => "Upcoming next season",
+            BrowseCategory::SearchResults => "Search",
+        };
+        write!(f, "{}", s)
+    }
 }
 pub struct BrowseState {
     pub media: Option<UserMediaList>,

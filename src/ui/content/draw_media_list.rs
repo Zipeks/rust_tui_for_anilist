@@ -1,4 +1,4 @@
-use crate::app_helper_structs::{MediaListItem, MediaTab};
+use crate::app_helper_structs::{MediaListItem};
 use ratatui::{prelude::*, widgets::*};
 
 pub fn draw(
@@ -7,7 +7,7 @@ pub fn draw(
     items: &[MediaListItem],
     is_active: bool,
     state: &mut TableState,
-    active_media: MediaTab,
+    title_spans: Vec<Span>,
 ) {
     let now = chrono::Utc::now().timestamp();
 
@@ -53,11 +53,6 @@ pub fn draw(
         })
         .collect();
 
-    let active_style = Style::default()
-        .fg(Color::White)
-        .add_modifier(Modifier::BOLD);
-    let inactive_style = Style::default().fg(Color::DarkGray);
-
     let table_widget = Table::new(
         rows,
         [
@@ -76,20 +71,7 @@ pub fn draw(
                 Style::default().fg(Color::DarkGray)
             })
             .border_type(BorderType::Rounded)
-            .title(
-                Line::from({
-                    let (anime_style, manga_style) = match active_media {
-                        MediaTab::Anime => (active_style, inactive_style),
-                        MediaTab::Manga => (inactive_style, active_style),
-                    };
-                    vec![
-                        Span::styled(" Anime ", anime_style),
-                        Span::raw("│"),
-                        Span::styled(" Manga ", manga_style),
-                    ]
-                })
-                .centered(),
-            ),
+            .title(Line::from(title_spans).centered()),
     )
     .highlight_symbol(">> ")
     .row_highlight_style(Style::default().yellow());
