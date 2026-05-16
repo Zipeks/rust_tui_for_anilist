@@ -33,15 +33,20 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
     let inactive_style = Style::default().fg(Color::DarkGray);
 
     let (media_items, active_state, title_spans) = match app.current_view {
-        
         CurrentView::Home => {
             let (items, state) = match app.active_tab {
                 MediaTab::Anime => (
-                    app.user_anime.as_ref().and_then(|l| l.items.as_deref()).unwrap_or(&[]),
+                    app.user_anime
+                        .as_ref()
+                        .and_then(|l| l.items.as_deref())
+                        .unwrap_or(&[]),
                     &mut app.user_anime_state,
                 ),
                 MediaTab::Manga => (
-                    app.user_manga.as_ref().and_then(|l| l.items.as_deref()).unwrap_or(&[]),
+                    app.user_manga
+                        .as_ref()
+                        .and_then(|l| l.items.as_deref())
+                        .unwrap_or(&[]),
                     &mut app.user_manga_state,
                 ),
             };
@@ -63,35 +68,60 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
 
         CurrentView::BrowseAnime | CurrentView::BrowseManga => {
             let (items, state, current_category) = if app.current_view == CurrentView::BrowseAnime {
-                let i = app.browse_anime.media.as_ref().and_then(|l| l.items.as_deref()).unwrap_or(&[]);
-                (i, &mut app.browse_anime.state, app.browse_anime.current_category)
+                let i = app
+                    .browse_anime
+                    .media
+                    .as_ref()
+                    .and_then(|l| l.items.as_deref())
+                    .unwrap_or(&[]);
+                (
+                    i,
+                    &mut app.browse_anime.state,
+                    app.browse_anime.current_category,
+                )
             } else {
-                let i = app.browse_manga.media.as_ref().and_then(|l| l.items.as_deref()).unwrap_or(&[]);
-                (i, &mut app.browse_manga.state, app.browse_manga.current_category)
+                let i = app
+                    .browse_manga
+                    .media
+                    .as_ref()
+                    .and_then(|l| l.items.as_deref())
+                    .unwrap_or(&[]);
+                (
+                    i,
+                    &mut app.browse_manga.state,
+                    app.browse_manga.current_category,
+                )
             };
 
-            let categories = [
-                BrowseCategory::Trending,
-                BrowseCategory::ThisSeason,
-                BrowseCategory::NextSeason,
-                BrowseCategory::SearchResults,
-            ];
-
+            let categories = BrowseCategory::ALL;
+            
             let mut spans = Vec::new();
             for (i, cat) in categories.iter().enumerate() {
-                let style = if *cat == current_category { active_style } else { inactive_style };
-                spans.push(Span::styled(format!(" {} ", cat.to_string()), style));
-                
+                let style = if *cat == current_category {
+                    active_style
+                } else {
+                    inactive_style
+                };
+                spans.push(Span::styled(
+                    format!(" {} ", {
+                        match app.current_view {
+                            CurrentView::BrowseAnime => cat.to_string_anime(),
+                            CurrentView::BrowseManga => cat.to_string_manga(),
+                            _ => "",
+                        }
+                    }),
+                    style,
+                ));
+
                 if i < categories.len() - 1 {
-                    spans.push(Span::raw("│")); 
+                    spans.push(Span::raw("│"));
                 }
             }
 
             (items, state, spans)
         }
-        _ => return, 
+        _ => return,
     };
-
 
     draw_media_list::draw(
         frame,

@@ -1,4 +1,4 @@
-use crate::app_helper_structs::{MediaListItem};
+use crate::app_helper_structs::MediaListItem;
 use ratatui::{prelude::*, widgets::*};
 
 pub fn draw(

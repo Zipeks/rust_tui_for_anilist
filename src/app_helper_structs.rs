@@ -146,31 +146,55 @@ pub struct MediaListItem {
 }
 #[derive(PartialEq, Clone, Copy)]
 pub enum BrowseCategory {
-    Trending,
-    ThisSeason,
-    NextSeason,
+    CategoryOne,
+    CategoryTwo,
+    CategoryThree,
     SearchResults,
 }
 impl BrowseCategory {
     pub const ALL: [BrowseCategory; 4] = [
-        BrowseCategory::Trending,
-        BrowseCategory::ThisSeason,
-        BrowseCategory::NextSeason,
+        BrowseCategory::CategoryOne,
+        BrowseCategory::CategoryTwo,
+        BrowseCategory::CategoryThree,
         BrowseCategory::SearchResults,
     ];
-}
-
-impl std::fmt::Display for BrowseCategory {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self {
-            BrowseCategory::Trending => "Trending",
-            BrowseCategory::ThisSeason => "Popular this season",
-            BrowseCategory::NextSeason => "Upcoming next season",
-            BrowseCategory::SearchResults => "Search",
-        };
-        write!(f, "{}", s)
+    pub fn next(&self) -> Self {
+        match self {
+            BrowseCategory::CategoryOne => BrowseCategory::CategoryTwo,
+            BrowseCategory::CategoryTwo => BrowseCategory::CategoryThree,
+            BrowseCategory::CategoryThree => BrowseCategory::SearchResults,
+            BrowseCategory::SearchResults => BrowseCategory::CategoryOne,
+        }
+    }
+    pub fn previous(&self) -> Self {
+        match self {
+            BrowseCategory::CategoryOne => BrowseCategory::SearchResults,
+            BrowseCategory::CategoryTwo => BrowseCategory::CategoryOne,
+            BrowseCategory::CategoryThree => BrowseCategory::CategoryTwo,
+            BrowseCategory::SearchResults => BrowseCategory::CategoryThree,
+        }
     }
 }
+impl BrowseCategory {
+    pub fn to_string_anime(&self) -> &'static str {
+        match self {
+            BrowseCategory::CategoryOne => "Trending",
+            BrowseCategory::CategoryTwo => "This Season",
+            BrowseCategory::CategoryThree => "Next Season",
+            BrowseCategory::SearchResults => "Search",
+        }
+    }
+
+    pub fn to_string_manga(&self) -> &'static str {
+        match self {
+            BrowseCategory::CategoryOne => "Trending",
+            BrowseCategory::CategoryTwo => "All Time Popular",
+            BrowseCategory::CategoryThree => "Top Manga",
+            BrowseCategory::SearchResults => "Search",
+        }
+    }
+}
+
 pub struct BrowseState {
     pub media: Option<UserMediaList>,
     pub state: TableState,

@@ -34,7 +34,12 @@ pub fn handle_sidebar_events(
     }
 }
 
-pub fn handle_center_events(app: &mut App, key: KeyEvent) {
+pub fn handle_center_events(
+    app: &mut App,
+    key: KeyEvent,
+    client: crate::anilist::AnilistClient,
+    tx: Sender<AppAction>,
+) {
     match key.code {
         KeyCode::Char('h') | KeyCode::Left | KeyCode::Esc => {
             app.active_block = ActiveBlock::Sidebar;
@@ -42,10 +47,20 @@ pub fn handle_center_events(app: &mut App, key: KeyEvent) {
         }
 
         KeyCode::Char('[') => {
-            app.active_tab = app.active_tab.previous();
+            match app.current_view {
+                CurrentView::Home => app.active_tab = app.active_tab.previous(),
+                CurrentView::BrowseAnime => app.browse_anime.current_category = app.browse_anime.current_category.previous(),
+                CurrentView::BrowseManga => app.browse_manga.current_category = app.browse_manga.current_category.previous(),
+                _ => todo!()
+            }
         }
         KeyCode::Char(']') => {
-            app.active_tab = app.active_tab.next();
+            match app.current_view {
+                CurrentView::Home => app.active_tab = app.active_tab.next(),
+                CurrentView::BrowseAnime => app.browse_anime.current_category = app.browse_anime.current_category.next(),
+                CurrentView::BrowseManga => app.browse_manga.current_category = app.browse_manga.current_category.next(),
+                _ => todo!()
+            }
         }
 
         KeyCode::Char('j') | KeyCode::Down => app.next_center_item(),
@@ -70,6 +85,23 @@ pub fn handle_center_events(app: &mut App, key: KeyEvent) {
                 }
             }
         }
+        KeyCode::Char('n') => {
+            app.next_center_page();
+            match app.current_view {
+                CurrentView::BrowseAnime | CurrentView::BrowseManga => app.fetch_browse(client, tx),
+                CurrentView::Home => app.fetch_home_data(client, tx),
+                _ => {}
+            }
+        }
+        KeyCode::Char('p') => {
+            app.previous_center_page();
+            match app.current_view {
+                CurrentView::BrowseAnime | CurrentView::BrowseManga => app.fetch_browse(client, tx),
+                CurrentView::Home => app.fetch_home_data(client, tx),
+                _ => {}
+            }
+        }
+
         _ => {}
     }
 }

@@ -60,27 +60,16 @@ impl App {
             browse_anime: BrowseState {
                 media: None,
                 state: TableState::default(),
-                current_category: BrowseCategory::Trending,
+                current_category: BrowseCategory::CategoryOne,
             },
             browse_manga: BrowseState {
                 media: None,
                 state: TableState::default(),
-                current_category: BrowseCategory::Trending,
+                current_category: BrowseCategory::CategoryOne,
             },
         }
     }
 
-    // pub fn get_current_tab_items(&self) -> &[MediaListItem] {
-    //     let active_list = match self.active_tab {
-    //         MediaTab::Anime => &self.user_anime,
-    //         MediaTab::Manga => &self.user_manga,
-    //     };
-
-    //     active_list
-    //         .as_ref()
-    //         .and_then(|l| l.items.as_deref())
-    //         .unwrap_or(&[])
-    // }
     pub fn next_sidebar_item(&mut self) {
         let len = self.sidebar_items.len();
         if len == 0 {
@@ -254,6 +243,78 @@ impl App {
         });
     }
 
+    pub fn next_center_page(&mut self) {
+        match self.current_view {
+            CurrentView::Home => match self.active_tab {
+                MediaTab::Anime => {
+                    if let Some(media) = &mut self.user_anime {
+                        if media.page_info.has_next_page.unwrap_or(false) {
+                            media.page_info.current_page = media.page_info.current_page + 1;
+                        }
+                    }
+                }
+                MediaTab::Manga => {
+                    if let Some(media) = &mut self.user_manga {
+                        if media.page_info.has_next_page.unwrap_or(false) {
+                            media.page_info.current_page = media.page_info.current_page + 1;
+                        }
+                    }
+                }
+            },
+            CurrentView::BrowseAnime => {
+                if let Some(media) = &mut self.browse_anime.media {
+                    if media.page_info.has_next_page.unwrap_or(false) {
+                        media.page_info.current_page = media.page_info.current_page + 1;
+                    }
+                }
+            }
+            CurrentView::BrowseManga => {
+                if let Some(media) = &mut self.browse_manga.media {
+                    if media.page_info.has_next_page.unwrap_or(false) {
+                        media.page_info.current_page = media.page_info.current_page + 1;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    pub fn previous_center_page(&mut self) {
+        match self.current_view {
+            CurrentView::Home => match self.active_tab {
+                MediaTab::Anime => {
+                    if let Some(media) = &mut self.user_anime {
+                        if media.page_info.current_page > 1 {
+                            media.page_info.current_page = media.page_info.current_page - 1;
+                        }
+                    }
+                }
+                MediaTab::Manga => {
+                    if let Some(media) = &mut self.user_manga {
+                        if media.page_info.current_page > 1 {
+                            media.page_info.current_page = media.page_info.current_page - 1;
+                        }
+                    }
+                }
+            },
+            CurrentView::BrowseAnime => {
+                if let Some(media) = &mut self.browse_anime.media {
+                    if media.page_info.current_page > 1 {
+                        media.page_info.current_page = media.page_info.current_page - 1
+                    }
+                }
+            }
+            CurrentView::BrowseManga => {
+                if let Some(media) = &mut self.browse_manga.media {
+                    if media.page_info.current_page > 1 {
+                        media.page_info.current_page = media.page_info.current_page - 1
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
     pub fn fetch_browse(&mut self, client: crate::anilist::AnilistClient, tx: Sender<AppAction>) {
         self.fetch_media(
             client,
@@ -261,17 +322,38 @@ impl App {
             None,
             match self.current_view {
                 CurrentView::BrowseAnime => match self.browse_anime.current_category {
-                    BrowseCategory::Trending => Some(vec![get_media::MediaSort::TRENDING_DESC]),
+                    BrowseCategory::CategoryOne => Some(vec![get_media::MediaSort::TRENDING_DESC]),
+                    BrowseCategory::CategoryTwo | BrowseCategory::CategoryThree => {
+                        Some(vec![get_media::MediaSort::POPULARITY_DESC])
+                    }
                     _ => todo!(),
                 },
                 CurrentView::BrowseManga => match self.browse_anime.current_category {
-                    BrowseCategory::Trending => Some(vec![get_media::MediaSort::TRENDING_DESC]),
+                    BrowseCategory::CategoryOne => Some(vec![get_media::MediaSort::TRENDING_DESC]),
                     _ => todo!(),
                 },
                 _ => todo!(),
             },
-            Some(1),
-            Some(20),
+            Some({
+                match self.current_view {
+                    CurrentView::BrowseAnime => {
+                        if let Some(media) = &self.browse_anime.media {
+                            media.page_info.current_page
+                        } else {
+                            1
+                        }
+                    }
+                    CurrentView::BrowseManga => {
+                        if let Some(media) = &self.browse_manga.media {
+                            media.page_info.current_page
+                        } else {
+                            1
+                        }
+                    }
+                    _ => 1,
+                }
+            }),
+            Some(25),
             match self.current_view {
                 CurrentView::BrowseAnime => get_media::MediaType::ANIME,
                 CurrentView::BrowseManga => get_media::MediaType::MANGA,
@@ -521,7 +603,9 @@ where
                 ActiveBlock::Sidebar => {
                     keybinds::handle_sidebar_events(app, key, client.clone(), tx.clone())
                 }
-                ActiveBlock::Center => keybinds::handle_center_events(app, key),
+                ActiveBlock::Center => {
+                    keybinds::handle_center_events(app, key, client.clone(), tx.clone())
+                }
                 _ => {}
             }
         }

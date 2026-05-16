@@ -1,4 +1,4 @@
-use crate::{app::App};
+use crate::app::App;
 use ratatui::prelude::*;
 
 mod browse;
