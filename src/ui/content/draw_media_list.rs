@@ -8,6 +8,7 @@ pub fn draw(
     is_active: bool,
     state: &mut TableState,
     title_spans: Vec<Span>,
+    page_info: Span,
 ) {
     let now = chrono::Utc::now().timestamp();
 
@@ -71,7 +72,8 @@ pub fn draw(
                 Style::default().fg(Color::DarkGray)
             })
             .border_type(BorderType::Rounded)
-            .title(Line::from(title_spans).centered()),
+            .title(Line::from(title_spans).centered())
+            .title_bottom(Line::from(page_info).centered()),
     )
     .highlight_symbol(">> ")
     .row_highlight_style(Style::default().yellow());

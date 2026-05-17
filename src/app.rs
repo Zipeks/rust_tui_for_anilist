@@ -1,5 +1,6 @@
 use crate::ui::ui;
 use crate::{app_helper_structs, keybinds};
+use chrono::{Datelike, Month};
 use ratatui::Terminal;
 use ratatui::backend::Backend;
 use ratatui::crossterm::event::{self};
@@ -12,7 +13,7 @@ use std::time::Duration;
 use crate::anilist::{get_media, get_user_media_list};
 use crate::app_helper_structs::{
     ActiveBlock, BrowseCategory, BrowseState, CurrentView, MediaListItem, MediaType,
-    NextAiringEpisode, PageInfo, User, UserMediaList,
+    NextAiringEpisode, PageInfo, Season, User, UserMediaList,
 };
 
 pub struct App {
@@ -117,9 +118,20 @@ impl App {
             tx,
             match self.browse_state.current_category {
                 BrowseCategory::CategoryOne => Some(get_user_media_list::MediaListStatus::CURRENT),
+                BrowseCategory::CategoryTwo => {
+                    Some(get_user_media_list::MediaListStatus::COMPLETED)
+                }
+                BrowseCategory::CategoryThree => {
+                    Some(get_user_media_list::MediaListStatus::PLANNING)
+                }
                 _ => None,
             },
-            None,
+            match self.browse_state.current_category {
+                BrowseCategory::CategoryTwo => {
+                    Some(vec![get_user_media_list::MediaListSort::SCORE_DESC])
+                }
+                _ => None,
+            },
             Some(
                 self.browse_state
                     .media
@@ -130,7 +142,7 @@ impl App {
                 self.browse_state
                     .media
                     .as_ref()
-                    .map_or(50, |m| m.page_info.per_page),
+                    .map_or(25, |m| m.page_info.per_page),
             ),
             match self.current_view {
                 CurrentView::UserAnime => get_user_media_list::MediaType::ANIME,
@@ -223,7 +235,7 @@ impl App {
                 self.browse_state
                     .media
                     .as_ref()
-                    .map_or(50, |m| m.page_info.per_page),
+                    .map_or(25, |m| m.page_info.per_page),
             ),
             match self.current_view {
                 CurrentView::BrowseAnime => get_media::MediaType::ANIME,
@@ -237,11 +249,37 @@ impl App {
                     _ => MediaType::Anime,
                 }
             },
-            None,
-            None,
+            match self.browse_state.current_category {
+                BrowseCategory::CategoryTwo => Some(App::get_season().to_get_media_media_season()),
+                BrowseCategory::CategoryThree => {
+                    Some(App::get_season().next().to_get_media_media_season())
+                }
+                _ => None,
+            },
+            match self.browse_state.current_category {
+                BrowseCategory::CategoryTwo | BrowseCategory::CategoryThree => {
+                    Some(App::get_year())
+                }
+                _ => None,
+            },
             None,
             None,
         );
+    }
+
+    pub fn get_year() -> i64 {
+        chrono::Utc::now().year() as i64
+    }
+    pub fn get_season() -> Season {
+        let current_date = chrono::Utc::now();
+        let month = current_date.month();
+        match month {
+            1 | 2 | 3 => Season::WINTER,
+            4 | 5 | 6 => Season::SPRING,
+            7 | 8 | 9 => Season::SUMMER,
+            10 | 11 | 12 => Season::FALL,
+            _ => unimplemented!(),
+        }
     }
 
     pub fn fetch_media(

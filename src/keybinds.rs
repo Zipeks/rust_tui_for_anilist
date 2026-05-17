@@ -18,11 +18,11 @@ pub fn handle_sidebar_events(
         KeyCode::Char('l') | KeyCode::Right | KeyCode::Enter => {
             if let Some(selected_idx) = app.sidebar_state.selected() {
                 let new_view = app.sidebar_items[selected_idx];
-                
+
                 if new_view != app.current_view {
                     app.current_view = new_view;
                     app.browse_state.current_category = BrowseCategory::CategoryOne;
-                    app.browse_state.media = None; 
+                    app.browse_state.media = None;
                 }
             }
             app.active_block = ActiveBlock::Center;

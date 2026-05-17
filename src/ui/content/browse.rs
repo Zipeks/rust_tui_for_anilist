@@ -71,6 +71,20 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
             title_spans.push(Span::raw("│"));
         }
     }
+    let page_text = app.browse_state.media.as_ref().map_or(
+            "1/1".to_string(), 
+            |media| {
+                let current = media.page_info.current_page;
+                
+                let last = media.page_info.last_page
+                    .map(|p| p.to_string())
+                .unwrap_or_else(|| "?".to_string());
+                
+            format!("{}/{}", current, last)
+        }
+    );
+
+    let page_info = Span::raw(page_text);
 
     draw_media_list::draw(
         frame,
@@ -79,5 +93,6 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
         is_center_active,
         active_state,
         title_spans,
+        page_info
     );
 }

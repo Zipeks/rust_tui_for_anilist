@@ -90,7 +90,10 @@ impl std::fmt::Display for MediaStatus {
         write!(f, "{}", s)
     }
 }
-use crate::anilist::get_user_media_list::{self, MediaListStatus};
+use crate::anilist::{
+    get_media,
+    get_user_media_list::{self, MediaListStatus},
+};
 impl From<get_user_media_list::MediaListStatus> for MediaStatus {
     fn from(graphql_status: get_user_media_list::MediaListStatus) -> Self {
         match graphql_status {
@@ -212,4 +215,20 @@ pub enum Season {
 }
 impl Season {
     pub const ALL: [Season; 4] = [Season::WINTER, Season::SPRING, Season::SUMMER, Season::FALL];
+    pub fn next(&self) -> Self {
+        match self {
+            Season::WINTER => Season::SPRING,
+            Season::SPRING => Season::SUMMER,
+            Season::SUMMER => Season::FALL,
+            Season::FALL => Season::WINTER,
+        }
+    }
+    pub fn to_get_media_media_season(&self) -> get_media::MediaSeason {
+        match self {
+            Season::WINTER => get_media::MediaSeason::WINTER,
+            Season::SPRING => get_media::MediaSeason::SPRING,
+            Season::SUMMER => get_media::MediaSeason::SUMMER,
+            Season::FALL => get_media::MediaSeason::FALL,
+        }
+    }
 }
