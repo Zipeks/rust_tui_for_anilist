@@ -1,6 +1,6 @@
 use crate::{
     app::{App, AppAction},
-    app_helper_structs::{ActiveBlock, CurrentView, MediaTab},
+    app_helper_structs::{ActiveBlock, BrowseCategory, CurrentView},
 };
 use ratatui::crossterm::event::KeyCode;
 use ratatui::crossterm::event::KeyEvent;
@@ -15,18 +15,21 @@ pub fn handle_sidebar_events(
     match key.code {
         KeyCode::Char('j') | KeyCode::Down => app.next_sidebar_item(),
         KeyCode::Char('k') | KeyCode::Up => app.previous_sidebar_item(),
-
         KeyCode::Char('l') | KeyCode::Right | KeyCode::Enter => {
             if let Some(selected_idx) = app.sidebar_state.selected() {
-                app.current_view = app.sidebar_items[selected_idx];
-                // app.current_media_state.select(Some(0));
+                let new_view = app.sidebar_items[selected_idx];
+
+                if new_view != app.current_view {
+                    app.current_view = new_view;
+                    app.browse_state.current_category = BrowseCategory::CategoryOne;
+                    app.browse_state.media = None;
+                }
             }
             app.active_block = ActiveBlock::Center;
 
             match app.current_view {
-                CurrentView::Home => app.fetch_home_data(client, tx),
-                CurrentView::BrowseAnime => app.fetch_browse(client, tx),
-                CurrentView::BrowseManga => app.fetch_browse(client, tx),
+                CurrentView::UserAnime | CurrentView::UserManga => app.fetch_user_media(client, tx),
+                CurrentView::BrowseAnime | CurrentView::BrowseManga => app.fetch_browse(client, tx),
                 _ => {}
             }
         }
@@ -46,36 +49,30 @@ pub fn handle_center_events(
             app.error_message = None;
         }
 
-        KeyCode::Char('[') => {
-            match app.current_view {
-                CurrentView::Home => app.active_tab = app.active_tab.previous(),
-                CurrentView::BrowseAnime => app.browse_anime.current_category = app.browse_anime.current_category.previous(),
-                CurrentView::BrowseManga => app.browse_manga.current_category = app.browse_manga.current_category.previous(),
-                _ => todo!()
+        KeyCode::Char('[') | KeyCode::Char(']') => {
+            if key.code == KeyCode::Char('[') {
+                app.browse_state.current_category = app.browse_state.current_category.previous();
+            } else {
+                app.browse_state.current_category = app.browse_state.current_category.next();
             }
-        }
-        KeyCode::Char(']') => {
+
+            app.browse_state.media = None;
+
+            let tx_clone = tx.clone();
             match app.current_view {
-                CurrentView::Home => app.active_tab = app.active_tab.next(),
-                CurrentView::BrowseAnime => app.browse_anime.current_category = app.browse_anime.current_category.next(),
-                CurrentView::BrowseManga => app.browse_manga.current_category = app.browse_manga.current_category.next(),
-                _ => todo!()
+                CurrentView::UserAnime | CurrentView::UserManga => {
+                    app.fetch_user_media(client, tx_clone)
+                }
+                CurrentView::BrowseAnime | CurrentView::BrowseManga => {
+                    app.fetch_browse(client, tx_clone)
+                }
             }
         }
 
         KeyCode::Char('j') | KeyCode::Down => app.next_center_item(),
         KeyCode::Char('k') | KeyCode::Up => app.previous_center_item(),
         KeyCode::Enter => {
-            let current_state = match app.current_view {
-                CurrentView::Home => match app.active_tab {
-                    MediaTab::Anime => &app.user_anime_state,
-                    MediaTab::Manga => &app.user_manga_state,
-                },
-                CurrentView::BrowseAnime => &app.browse_anime.state,
-                CurrentView::BrowseManga => &app.browse_manga.state,
-                _ => return,
-            };
-
+            let current_state = app.browse_state.state;
             if let Some(selected_index) = current_state.selected() {
                 let current_items = app.get_current_center_items();
 
@@ -89,19 +86,16 @@ pub fn handle_center_events(
             app.next_center_page();
             match app.current_view {
                 CurrentView::BrowseAnime | CurrentView::BrowseManga => app.fetch_browse(client, tx),
-                CurrentView::Home => app.fetch_home_data(client, tx),
-                _ => {}
+                CurrentView::UserAnime | CurrentView::UserManga => app.fetch_user_media(client, tx),
             }
         }
         KeyCode::Char('p') => {
             app.previous_center_page();
             match app.current_view {
                 CurrentView::BrowseAnime | CurrentView::BrowseManga => app.fetch_browse(client, tx),
-                CurrentView::Home => app.fetch_home_data(client, tx),
-                _ => {}
+                CurrentView::UserAnime | CurrentView::UserManga => app.fetch_user_media(client, tx),
             }
         }
-
         _ => {}
     }
 }

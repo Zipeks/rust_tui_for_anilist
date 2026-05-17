@@ -1,6 +1,6 @@
 use crate::{
     app::App,
-    app_helper_structs::{ActiveBlock, BrowseCategory, CurrentView, MediaTab},
+    app_helper_structs::{ActiveBlock, BrowseCategory, CurrentView},
     ui::content::draw_media_list,
 };
 use ratatui::prelude::*;
@@ -32,96 +32,59 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
         .add_modifier(Modifier::BOLD);
     let inactive_style = Style::default().fg(Color::DarkGray);
 
-    let (media_items, active_state, title_spans) = match app.current_view {
-        CurrentView::Home => {
-            let (items, state) = match app.active_tab {
-                MediaTab::Anime => (
-                    app.user_anime
-                        .as_ref()
-                        .and_then(|l| l.items.as_deref())
-                        .unwrap_or(&[]),
-                    &mut app.user_anime_state,
-                ),
-                MediaTab::Manga => (
-                    app.user_manga
-                        .as_ref()
-                        .and_then(|l| l.items.as_deref())
-                        .unwrap_or(&[]),
-                    &mut app.user_manga_state,
-                ),
-            };
-
-            let (a_s, m_s) = if app.active_tab == MediaTab::Anime {
-                (active_style, inactive_style)
-            } else {
-                (inactive_style, active_style)
-            };
-
-            let spans = vec![
-                Span::styled(" Anime ", a_s),
-                Span::raw("│"),
-                Span::styled(" Manga ", m_s),
-            ];
-
-            (items, state, spans)
-        }
-
-        CurrentView::BrowseAnime | CurrentView::BrowseManga => {
-            let (items, state, current_category) = if app.current_view == CurrentView::BrowseAnime {
-                let i = app
-                    .browse_anime
-                    .media
-                    .as_ref()
-                    .and_then(|l| l.items.as_deref())
-                    .unwrap_or(&[]);
-                (
-                    i,
-                    &mut app.browse_anime.state,
-                    app.browse_anime.current_category,
-                )
-            } else {
-                let i = app
-                    .browse_manga
-                    .media
-                    .as_ref()
-                    .and_then(|l| l.items.as_deref())
-                    .unwrap_or(&[]);
-                (
-                    i,
-                    &mut app.browse_manga.state,
-                    app.browse_manga.current_category,
-                )
-            };
-
-            let categories = BrowseCategory::ALL;
-            
-            let mut spans = Vec::new();
-            for (i, cat) in categories.iter().enumerate() {
-                let style = if *cat == current_category {
-                    active_style
-                } else {
-                    inactive_style
-                };
-                spans.push(Span::styled(
-                    format!(" {} ", {
-                        match app.current_view {
-                            CurrentView::BrowseAnime => cat.to_string_anime(),
-                            CurrentView::BrowseManga => cat.to_string_manga(),
-                            _ => "",
-                        }
-                    }),
-                    style,
-                ));
-
-                if i < categories.len() - 1 {
-                    spans.push(Span::raw("│"));
-                }
-            }
-
-            (items, state, spans)
-        }
-        _ => return,
+    let (media_items, active_state, current_category) = {
+        let i = app
+            .browse_state
+            .media
+            .as_ref()
+            .and_then(|l| l.items.as_deref())
+            .unwrap_or(&[]);
+        (
+            i,
+            &mut app.browse_state.state,
+            app.browse_state.current_category,
+        )
     };
+
+    let categories = BrowseCategory::ALL;
+
+    let mut title_spans = Vec::new();
+    for (i, cat) in categories.iter().enumerate() {
+        let style = if *cat == current_category {
+            active_style
+        } else {
+            inactive_style
+        };
+        title_spans.push(Span::styled(
+            format!(" {} ", {
+                match app.current_view {
+                    CurrentView::UserAnime => cat.to_string_user_anime(),
+                    CurrentView::UserManga => cat.to_string_user_manga(),
+                    CurrentView::BrowseAnime => cat.to_string_browse_anime(),
+                    CurrentView::BrowseManga => cat.to_string_browse_manga(),
+                }
+            }),
+            style,
+        ));
+
+        if i < categories.len() - 1 {
+            title_spans.push(Span::raw("│"));
+        }
+    }
+    let page_text = app.browse_state.media.as_ref().map_or(
+            "1/1".to_string(), 
+            |media| {
+                let current = media.page_info.current_page;
+                
+                let last = media.page_info.last_page
+                    .map(|p| p.to_string())
+                .unwrap_or_else(|| "?".to_string());
+                
+            format!("{}/{}", current, last)
+        }
+    );
+
+    let page_info = Span::raw(page_text);
 
     draw_media_list::draw(
         frame,
@@ -130,5 +93,6 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
         is_center_active,
         active_state,
         title_spans,
+        page_info
     );
 }

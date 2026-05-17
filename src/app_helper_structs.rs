@@ -7,27 +7,27 @@ pub enum ActiveBlock {
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum CurrentView {
-    Home,
+    UserAnime,
+    UserManga,
     BrowseAnime,
     BrowseManga,
-    Profile,
 }
 
 impl CurrentView {
     pub const ALL: [CurrentView; 4] = [
-        CurrentView::Home,
+        CurrentView::UserAnime,
+        CurrentView::UserManga,
         CurrentView::BrowseAnime,
         CurrentView::BrowseManga,
-        CurrentView::Profile,
     ];
 }
 impl std::fmt::Display for CurrentView {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            CurrentView::Home => "Home",
+            CurrentView::UserAnime => "Anime",
+            CurrentView::UserManga => "Manga",
             CurrentView::BrowseAnime => "Browse Anime",
             CurrentView::BrowseManga => "Browse Manga",
-            CurrentView::Profile => "Profile",
         };
         write!(f, "{}", s)
     }
@@ -45,24 +45,6 @@ impl User {
         &self.name
     }
 }
-#[derive(Clone, Copy, PartialEq)]
-pub enum MediaTab {
-    Anime,
-    Manga,
-}
-
-impl MediaTab {
-    pub fn next(&self) -> Self {
-        match self {
-            MediaTab::Anime => MediaTab::Manga,
-            MediaTab::Manga => MediaTab::Anime,
-        }
-    }
-
-    pub fn previous(&self) -> Self {
-        self.next()
-    }
-}
 pub struct PageInfo {
     pub current_page: i64,
     pub per_page: i64,
@@ -70,7 +52,6 @@ pub struct PageInfo {
     pub last_page: Option<i64>,
     pub has_next_page: Option<bool>,
 }
-use std::fmt::write;
 
 use ratatui::widgets::TableState;
 
@@ -109,7 +90,10 @@ impl std::fmt::Display for MediaStatus {
         write!(f, "{}", s)
     }
 }
-use crate::anilist::get_user_media_list::{self, MediaListStatus};
+use crate::anilist::{
+    get_media,
+    get_user_media_list::{self, MediaListStatus},
+};
 impl From<get_user_media_list::MediaListStatus> for MediaStatus {
     fn from(graphql_status: get_user_media_list::MediaListStatus) -> Self {
         match graphql_status {
@@ -126,7 +110,6 @@ impl From<get_user_media_list::MediaListStatus> for MediaStatus {
 pub struct UserMediaList {
     pub page_info: PageInfo,
     pub user_id: i64,
-    pub type_: MediaType,
     pub items: Option<Vec<MediaListItem>>,
 }
 
@@ -149,53 +132,71 @@ pub enum BrowseCategory {
     CategoryOne,
     CategoryTwo,
     CategoryThree,
-    SearchResults,
+    Search,
 }
 impl BrowseCategory {
     pub const ALL: [BrowseCategory; 4] = [
         BrowseCategory::CategoryOne,
         BrowseCategory::CategoryTwo,
         BrowseCategory::CategoryThree,
-        BrowseCategory::SearchResults,
+        BrowseCategory::Search,
     ];
     pub fn next(&self) -> Self {
         match self {
             BrowseCategory::CategoryOne => BrowseCategory::CategoryTwo,
             BrowseCategory::CategoryTwo => BrowseCategory::CategoryThree,
-            BrowseCategory::CategoryThree => BrowseCategory::SearchResults,
-            BrowseCategory::SearchResults => BrowseCategory::CategoryOne,
+            BrowseCategory::CategoryThree => BrowseCategory::Search,
+            BrowseCategory::Search => BrowseCategory::CategoryOne,
         }
     }
     pub fn previous(&self) -> Self {
         match self {
-            BrowseCategory::CategoryOne => BrowseCategory::SearchResults,
+            BrowseCategory::CategoryOne => BrowseCategory::Search,
             BrowseCategory::CategoryTwo => BrowseCategory::CategoryOne,
             BrowseCategory::CategoryThree => BrowseCategory::CategoryTwo,
-            BrowseCategory::SearchResults => BrowseCategory::CategoryThree,
+            BrowseCategory::Search => BrowseCategory::CategoryThree,
         }
     }
 }
 impl BrowseCategory {
-    pub fn to_string_anime(&self) -> &'static str {
+    pub fn to_string_user_anime(&self) -> &'static str {
+        match self {
+            BrowseCategory::CategoryOne => "Watching",
+            BrowseCategory::CategoryTwo => "Watched",
+            BrowseCategory::CategoryThree => "Planning",
+            BrowseCategory::Search => "All",
+        }
+    }
+    pub fn to_string_user_manga(&self) -> &'static str {
+        match self {
+            BrowseCategory::CategoryOne => "Reading",
+            BrowseCategory::CategoryTwo => "Read",
+            BrowseCategory::CategoryThree => "Planning",
+            BrowseCategory::Search => "All",
+        }
+    }
+
+    pub fn to_string_browse_anime(&self) -> &'static str {
         match self {
             BrowseCategory::CategoryOne => "Trending",
             BrowseCategory::CategoryTwo => "This Season",
             BrowseCategory::CategoryThree => "Next Season",
-            BrowseCategory::SearchResults => "Search",
+            BrowseCategory::Search => "Search",
         }
     }
 
-    pub fn to_string_manga(&self) -> &'static str {
+    pub fn to_string_browse_manga(&self) -> &'static str {
         match self {
             BrowseCategory::CategoryOne => "Trending",
             BrowseCategory::CategoryTwo => "All Time Popular",
             BrowseCategory::CategoryThree => "Top Manga",
-            BrowseCategory::SearchResults => "Search",
+            BrowseCategory::Search => "Search",
         }
     }
 }
 
 pub struct BrowseState {
+    pub loaded_view: CurrentView,
     pub media: Option<UserMediaList>,
     pub state: TableState,
     pub current_category: BrowseCategory,
@@ -214,4 +215,20 @@ pub enum Season {
 }
 impl Season {
     pub const ALL: [Season; 4] = [Season::WINTER, Season::SPRING, Season::SUMMER, Season::FALL];
+    pub fn next(&self) -> Self {
+        match self {
+            Season::WINTER => Season::SPRING,
+            Season::SPRING => Season::SUMMER,
+            Season::SUMMER => Season::FALL,
+            Season::FALL => Season::WINTER,
+        }
+    }
+    pub fn to_get_media_media_season(&self) -> get_media::MediaSeason {
+        match self {
+            Season::WINTER => get_media::MediaSeason::WINTER,
+            Season::SPRING => get_media::MediaSeason::SPRING,
+            Season::SUMMER => get_media::MediaSeason::SUMMER,
+            Season::FALL => get_media::MediaSeason::FALL,
+        }
+    }
 }
