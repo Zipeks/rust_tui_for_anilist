@@ -2,17 +2,19 @@ use graphql_client::{GraphQLQuery, Response};
 use reqwest::{Client, header};
 use std::error::Error;
 
+use crate::app_helper_structs::MediaType;
+
 // crate::anilist::{get_user_media_list};
 // crate::anilist::{get_media};
 
 #[derive(GraphQLQuery)]
 #[graphql(
     schema_path = "schema.json",
-    query_path = "qraphql/get_anime.graphql",
+    query_path = "qraphql/get_media_details.graphql",
     response_derives = "Debug"
 )]
 
-pub struct GetAnime;
+pub struct GetMediaDetails;
 
 #[derive(GraphQLQuery)]
 #[graphql(
@@ -205,6 +207,36 @@ impl AnilistClient {
             .await?;
 
         let response_body: graphql_client::Response<get_media::ResponseData> = res.json().await?;
+
+        if let Some(errors) = response_body.errors {
+            return Err(format!("GraphQL Error: {:?}", errors).into());
+        }
+
+        response_body.data.ok_or_else(|| "No data".into())
+    }
+
+    pub async fn get_media_details(
+        &self,
+        media_id: i64,
+        media_type: MediaType,
+    ) -> Result<get_media_details::ResponseData, Box<dyn std::error::Error + Sync + Send>> {
+        let variables = get_media_details::Variables {
+            media_id: media_id,
+            type_: media_type.to_get_media_details(),
+            format: None,
+        };
+
+        let request_body = GetMediaDetails::build_query(variables);
+
+        let res = self
+            .http_client
+            .post(self.api_url)
+            .json(&request_body)
+            .send()
+            .await?;
+
+        let response_body: graphql_client::Response<get_media_details::ResponseData> =
+            res.json().await?;
 
         if let Some(errors) = response_body.errors {
             return Err(format!("GraphQL Error: {:?}", errors).into());

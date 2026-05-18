@@ -1,6 +1,6 @@
 use crate::ui::ui;
-use crate::{app_helper_structs, keybinds};
-use chrono::{Datelike, Month};
+use crate::utils::Utils;
+use crate::{keybinds};
 use ratatui::Terminal;
 use ratatui::backend::Backend;
 use ratatui::crossterm::event::{self};
@@ -185,7 +185,7 @@ impl App {
                 app.is_loading = false;
                 match timeout_result {
                     Ok(Ok(data)) => {
-                        let clean_list = App::to_user_media_list(data, user_id);
+                        let clean_list =  UserMediaList::from(data);
 
                         app.browse_state.media = Some(clean_list);
                         app.browse_state.state.select_first();
@@ -266,15 +266,15 @@ impl App {
                 }
             },
             match self.browse_state.current_category {
-                BrowseCategory::CategoryTwo => Some(App::get_season().to_get_media_media_season()),
+                BrowseCategory::CategoryTwo => Some(Utils::get_season().to_get_media_media_season()),
                 BrowseCategory::CategoryThree => {
-                    Some(App::get_season().next().to_get_media_media_season())
+                    Some(Utils::get_season().next().to_get_media_media_season())
                 }
                 _ => None,
             },
             match self.browse_state.current_category {
                 BrowseCategory::CategoryTwo | BrowseCategory::CategoryThree => {
-                    Some(App::get_year())
+                    Some(Utils::get_year())
                 }
                 _ => None,
             },
@@ -283,20 +283,6 @@ impl App {
         );
     }
 
-    pub fn get_year() -> i64 {
-        chrono::Utc::now().year() as i64
-    }
-    pub fn get_season() -> Season {
-        let current_date = chrono::Utc::now();
-        let month = current_date.month();
-        match month {
-            1 | 2 | 3 => Season::WINTER,
-            4 | 5 | 6 => Season::SPRING,
-            7 | 8 | 9 => Season::SUMMER,
-            10 | 11 | 12 => Season::FALL,
-            _ => unimplemented!(),
-        }
-    }
 
     pub fn fetch_media(
         &mut self,
@@ -339,7 +325,7 @@ impl App {
 
                 match timeout_result {
                     Ok(Ok(data)) => {
-                        let clean_list = App::browse_media_to_user_list(data, app_type);
+                        let clean_list = UserMediaList::from(data);
                         app.browse_state.media = Some(clean_list);
                         app.browse_state.state.select_first();
                     }
@@ -354,134 +340,6 @@ impl App {
 
             let _ = tx_clone.send(action);
         });
-    }
-
-    pub fn to_user_media_list(
-        data: get_user_media_list::ResponseData,
-        user_id: i64,
-    ) -> UserMediaList {
-        let mut page_info = PageInfo {
-            current_page: 1,
-            per_page: 50,
-            total: None,
-            last_page: None,
-            has_next_page: None,
-        };
-        let mut items = Vec::new();
-
-        if let Some(page) = data.page {
-            if let Some(pi) = page.page_info {
-                page_info.current_page = pi.current_page.unwrap_or(1);
-                page_info.per_page = pi.per_page.unwrap_or(50);
-                page_info.total = pi.total;
-                page_info.last_page = pi.last_page;
-                page_info.has_next_page = pi.has_next_page;
-            }
-
-            if let Some(media_list) = page.media_list {
-                for m in media_list.into_iter().flatten() {
-                    let id = m.media.as_ref().map(|x| x.id).unwrap_or(0);
-                    let title = m
-                        .media
-                        .as_ref()
-                        .and_then(|x| x.title.as_ref())
-                        .and_then(|t| t.user_preferred.clone())
-                        .unwrap_or_else(|| "Unknown".to_string());
-
-                    let total = m.media.as_ref().and_then(|x| {
-                        Some(x.episodes.unwrap_or_else(|| 0) + x.chapters.unwrap_or_else(|| 0))
-                    });
-
-                    let next_episode = m
-                        .media
-                        .as_ref()
-                        .and_then(|next| next.next_airing_episode.clone())
-                        .map(|airing| NextAiringEpisode {
-                            airing_at: airing.airing_at,
-                            episode: airing.episode,
-                        });
-                    let mapped_status: Option<app_helper_structs::MediaStatus> =
-                        m.status.map(|s| s.into());
-
-                    items.push(MediaListItem {
-                        id,
-                        title,
-                        progress: m.progress,
-                        total,
-                        status: mapped_status,
-                        next_airing_episode: next_episode,
-                    });
-                }
-            }
-        }
-
-        UserMediaList {
-            page_info,
-            user_id,
-            items: Some(items),
-        }
-    }
-    pub fn browse_media_to_user_list(
-        data: crate::anilist::get_media::ResponseData,
-        type_: MediaType,
-    ) -> UserMediaList {
-        let mut page_info = PageInfo {
-            current_page: 1,
-            per_page: 50,
-            total: None,
-            last_page: None,
-            has_next_page: None,
-        };
-        let mut items = Vec::new();
-
-        if let Some(page) = data.page {
-            if let Some(pi) = page.page_info {
-                page_info.current_page = pi.current_page.unwrap_or(1);
-                page_info.per_page = pi.per_page.unwrap_or(50);
-                page_info.total = pi.total;
-                page_info.last_page = pi.last_page;
-                page_info.has_next_page = pi.has_next_page;
-            }
-
-            if let Some(media_array) = page.media {
-                for m in media_array.into_iter().flatten() {
-                    let id = m.id;
-                    let title = m
-                        .title
-                        .as_ref()
-                        .and_then(|t| t.user_preferred.clone())
-                        .unwrap_or_else(|| "Unknown".to_string());
-
-                    let total = match type_ {
-                        MediaType::Anime => m.episodes,
-                        MediaType::Manga => m.chapters,
-                    };
-
-                    let next_episode =
-                        m.next_airing_episode
-                            .as_ref()
-                            .map(|airing| NextAiringEpisode {
-                                airing_at: airing.airing_at,
-                                episode: airing.episode,
-                            });
-
-                    items.push(MediaListItem {
-                        id,
-                        title,
-                        progress: None,
-                        total,
-                        status: None,
-                        next_airing_episode: next_episode,
-                    });
-                }
-            }
-        }
-
-        UserMediaList {
-            page_info,
-            user_id: 0,
-            items: Some(items),
-        }
     }
 }
 
@@ -540,9 +398,8 @@ fn spawn_initial_viewer_fetch(client: crate::anilist::AnilistClient, tx: Sender<
         let timeout_duration = Duration::from_secs(5);
         let fetch_future = client_clone.get_basic_viewer();
 
-        let timeout_result = tokio::time::timeout(timeout_duration,fetch_future).await;
+        let timeout_result = tokio::time::timeout(timeout_duration, fetch_future).await;
         let action: AppAction = Box::new(move |app: &mut App| {
-
             if let Ok(Ok(data)) = timeout_result {
                 if let Some(viewer) = data.viewer {
                     let allows_nsfw = viewer.options.and_then(|o| o.display_adult_content);

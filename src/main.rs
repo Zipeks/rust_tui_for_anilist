@@ -17,6 +17,7 @@ mod app;
 mod app_helper_structs;
 mod keybinds;
 mod ui;
+mod utils;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {

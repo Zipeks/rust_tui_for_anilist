@@ -1,0 +1,25 @@
+query GetMediaDetails($mediaId: Int!, $type: MediaType!, $format: ScoreFormat) {
+  Media(id: $mediaId, type: $type) {
+    averageScore
+    chapters
+    coverImage {
+      medium
+    }
+    description
+    episodes
+    mediaListEntry {
+      progress
+      score(format: $format)
+      status
+    }
+    season
+    seasonYear
+    siteUrl
+    status
+    title {
+      userPreferred
+    }
+    type
+    volumes
+  }
+}
