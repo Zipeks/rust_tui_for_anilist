@@ -75,16 +75,17 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
         .browse_state
         .media
         .as_ref()
-        .map_or("1/1".to_string(), |media| {
+        .map_or("1".to_string(), |media| {
             let current = media.page_info.current_page;
+            // Api doesn't give accurate info about number of pages
 
-            let last = media
-                .page_info
-                .last_page
-                .map(|p| p.to_string())
-                .unwrap_or_else(|| "?".to_string());
+            // let last = media
+            //     .page_info
+            //     .last_page
+            //     .map(|p| p.to_string())
+            //     .unwrap_or_else(|| "?".to_string());
 
-            format!("{}/{}", current, last)
+            format!("{}", current)
         });
 
     let page_info = Span::raw(page_text);
@@ -97,5 +98,6 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
         active_state,
         title_spans,
         page_info,
+        app.current_view,
     );
 }

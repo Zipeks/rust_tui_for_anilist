@@ -24,11 +24,16 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App) {
         .split(inner_header_area);
 
     let header_info = Paragraph::new(Line::from("Rust tui for AniList")).left_aligned();
-
     frame.render_widget(header_info, header[1]);
 
     let spacer = Paragraph::new("│").style(Style::default().fg(Color::DarkGray));
     frame.render_widget(spacer, header[2]);
+
+    let header_current_view = Paragraph::new(app.current_view.to_string()).centered();
+    frame.render_widget(header_current_view, header[3]);
+
+    let spacer = Paragraph::new("│").style(Style::default().fg(Color::DarkGray));
+    frame.render_widget(spacer, header[4]);
 
     let header_user_info = Paragraph::new({
         if let Some(user) = &app.user {
@@ -40,11 +45,4 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App) {
     .right_aligned();
 
     frame.render_widget(header_user_info, header[5]);
-
-    let spacer = Paragraph::new("│").style(Style::default().fg(Color::DarkGray));
-    frame.render_widget(spacer, header[4]);
-
-    let header_current_view = Paragraph::new(app.current_view.to_string()).centered();
-
-    frame.render_widget(header_current_view, header[3]);
 }

@@ -216,7 +216,7 @@ impl App {
 
     pub fn previous_center_page(&mut self) {
         if let Some(media) = &mut self.browse_state.media {
-            if media.page_info.has_next_page.unwrap_or(false) {
+            if media.page_info.current_page > 1 {
                 media.page_info.current_page = media.page_info.current_page - 1;
             }
         }

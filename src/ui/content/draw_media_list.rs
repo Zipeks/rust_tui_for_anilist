@@ -1,4 +1,4 @@
-use crate::app_helper_structs::MediaListItem;
+use crate::app_helper_structs::{CurrentView, MediaListItem};
 use ratatui::{prelude::*, widgets::*};
 
 pub fn draw(
@@ -9,6 +9,7 @@ pub fn draw(
     state: &mut TableState,
     title_spans: Vec<Span>,
     page_info: Span,
+    current_view: CurrentView,
 ) {
     let now = chrono::Utc::now().timestamp();
 
@@ -20,8 +21,12 @@ pub fn draw(
                 0 => "?".to_string(),
                 _ => item.total.to_string(),
             };
-
-            let progress_str = format!("{}/{} ", progress, total);
+            let progress_str = match current_view {
+                CurrentView::UserAnime | CurrentView::UserManga => {
+                    format!("{}/{} ", progress, total)
+                }
+                CurrentView::BrowseAnime | CurrentView::BrowseManga => format!("{} ",total.to_string()),
+            };
 
             let airing_str = if let Some(ref airing) = item.next_airing_episode {
                 let diff_seconds = airing.airing_at - now;
@@ -54,6 +59,23 @@ pub fn draw(
             ])
         })
         .collect();
+    let header_row = Row::new(vec![
+        Cell::from(""),
+        Cell::from("Title"),
+        Cell::from("Next episode"),
+        Cell::from(Line::from(match current_view {
+            CurrentView::UserAnime | CurrentView::UserManga => "Progress ",
+            CurrentView::BrowseAnime => "Episodes ",
+            CurrentView::BrowseManga => "Chapters "
+        }).right_aligned())
+        
+    ])
+    .style(
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD),
+    )
+    .bottom_margin(1);
 
     let table_widget = Table::new(
         rows,
@@ -64,6 +86,7 @@ pub fn draw(
             Constraint::Length(11),
         ],
     )
+    .header(header_row)
     .block(
         Block::default()
             .borders(Borders::ALL)
