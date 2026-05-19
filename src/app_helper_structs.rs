@@ -53,6 +53,7 @@ pub struct PageInfo {
     pub has_next_page: Option<bool>,
 }
 
+use moka::ops::compute::Op;
 use ratatui::widgets::TableState;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -107,6 +108,20 @@ impl From<get_user_media_list::MediaListStatus> for UserMediaStatus {
         }
     }
 }
+impl From<get_media_details::MediaListStatus> for UserMediaStatus {
+    fn from(graphql_status: get_media_details::MediaListStatus) -> Self {
+        match graphql_status {
+            get_media_details::MediaListStatus::CURRENT => UserMediaStatus::Current,
+            get_media_details::MediaListStatus::PLANNING => UserMediaStatus::Planning,
+            get_media_details::MediaListStatus::COMPLETED => UserMediaStatus::Completed,
+            get_media_details::MediaListStatus::DROPPED => UserMediaStatus::Dropped,
+            get_media_details::MediaListStatus::PAUSED => UserMediaStatus::Paused,
+            get_media_details::MediaListStatus::REPEATING => UserMediaStatus::Repeating,
+            get_media_details::MediaListStatus::Other(_) => UserMediaStatus::Unknown,
+        }
+    }
+}
+
 pub enum MediaStatus {
     Finished,
     Releasing,
@@ -163,7 +178,7 @@ impl From<get_media::ResponseData> for UserMediaList {
                         .and_then(|t| t.user_preferred.clone())
                         .unwrap_or_else(|| "Unknown".to_string());
 
-                    let total = m.episodes.unwrap_or(0) + m.chapters.unwrap_or(0);
+                    let total = m.episodes.or(m.chapters);
 
                     let next_episode =
                         m.next_airing_episode
@@ -172,12 +187,13 @@ impl From<get_media::ResponseData> for UserMediaList {
                                 airing_at: airing.airing_at,
                                 episode: airing.episode,
                             });
-
+                    let average_score = m.average_score;
                     items.push(MediaListItem {
                         id,
                         title,
                         progress: None,
                         total,
+                        average_score,
                         status: None,
                         next_airing_episode: next_episode,
                     });
@@ -221,9 +237,9 @@ impl From<get_user_media_list::ResponseData> for UserMediaList {
                         .and_then(|x| x.title.as_ref())
                         .and_then(|t| t.user_preferred.clone())
                         .unwrap_or_else(|| "Unknown".to_string());
-                    let mut total = 0;
+                    let mut total = None;
                     if let Some(m) = &m.media {
-                        total = m.episodes.unwrap_or(0) + m.chapters.unwrap_or(0);
+                        total = m.episodes.or(m.chapters);
                     };
 
                     let next_episode = m
@@ -235,12 +251,12 @@ impl From<get_user_media_list::ResponseData> for UserMediaList {
                             episode: airing.episode,
                         });
                     let mapped_status: Option<UserMediaStatus> = m.status.map(|s| s.into());
-
                     items.push(MediaListItem {
                         id,
                         title,
                         progress: m.progress,
                         total,
+                        average_score: None,
                         status: mapped_status,
                         next_airing_episode: next_episode,
                     });
@@ -265,8 +281,9 @@ pub struct MediaListItem {
     pub id: i64,
     pub title: String,
     pub progress: Option<i64>,
-    pub total: i64,
+    pub total: Option<i64>,
     pub status: Option<UserMediaStatus>,
+    pub average_score: Option<i64>,
     pub next_airing_episode: Option<NextAiringEpisode>,
 }
 #[derive(PartialEq, Clone, Copy)]
@@ -369,22 +386,54 @@ pub struct MediaDetails {
     total: Option<i64>,
     cover_image: String,
     season: Season,
-    season_yer: i64,
+    season_year: i64,
     site_url: String,
     media_status: MediaStatus,
     user_media_details: Option<UserMediaDetails>,
 }
-// impl From<get_media_details::ResponseData> for MediaDetails {
-// fn from(data: get_user_media_list::ResponseData) -> Self {
-//
-// }
-// }
+impl From<get_media_details::ResponseData> for MediaDetails {
+    fn from(data: get_media_details::ResponseData) -> Self {
+        let media = data.media.unwrap();
+
+        let title = media.title.map(|t| t.user_preferred.unwrap()).unwrap();
+        let average_score = media.average_score.unwrap();
+        let description = media.description.unwrap();
+        let total = Some(media.chapters.or(media.episodes).unwrap());
+        let cover_image = media.cover_image.map(|m| m.medium.unwrap()).unwrap();
+        let season = Season::from(media.season.unwrap());
+        let season_year = media.season_year.unwrap();
+        let site_url = media.site_url.unwrap();
+        let media_status = MediaStatus::from(media.status.unwrap());
+        let mut user_media_details: Option<UserMediaDetails> = None;
+
+        if let Some(m) = media.media_list_entry {
+            user_media_details = Some(UserMediaDetails {
+                score: m.score.unwrap(),
+                progress: m.progress.unwrap_or(0),
+                status: UserMediaStatus::from(m.status.unwrap()),
+            });
+        }
+        MediaDetails {
+            title,
+            description,
+            average_score,
+            total,
+            cover_image,
+            season,
+            season_year,
+            site_url,
+            media_status,
+            user_media_details,
+        }
+    }
+}
 
 pub enum Season {
     WINTER,
     SPRING,
     SUMMER,
     FALL,
+    Unknown,
 }
 impl Season {
     pub const ALL: [Season; 4] = [Season::WINTER, Season::SPRING, Season::SUMMER, Season::FALL];
@@ -394,6 +443,7 @@ impl Season {
             Season::SPRING => Season::SUMMER,
             Season::SUMMER => Season::FALL,
             Season::FALL => Season::WINTER,
+            Season::Unknown => Season::Unknown,
         }
     }
     pub fn to_get_media_media_season(&self) -> get_media::MediaSeason {
@@ -402,6 +452,18 @@ impl Season {
             Season::SPRING => get_media::MediaSeason::SPRING,
             Season::SUMMER => get_media::MediaSeason::SUMMER,
             Season::FALL => get_media::MediaSeason::FALL,
+            Season::Unknown => get_media::MediaSeason::Other("".to_string()),
+        }
+    }
+}
+impl From<get_media_details::MediaSeason> for Season {
+    fn from(value: get_media_details::MediaSeason) -> Self {
+        match value {
+            get_media_details::MediaSeason::WINTER => Season::WINTER,
+            get_media_details::MediaSeason::SPRING => Season::SPRING,
+            get_media_details::MediaSeason::SUMMER => Season::SUMMER,
+            get_media_details::MediaSeason::FALL => Season::FALL,
+            _ => Season::Unknown,
         }
     }
 }

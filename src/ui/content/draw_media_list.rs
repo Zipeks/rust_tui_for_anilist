@@ -18,14 +18,21 @@ pub fn draw(
         .map(|item| {
             let progress = item.progress.unwrap_or(0);
             let total = match item.total {
-                0 => "?".to_string(),
-                _ => item.total.to_string(),
+                None => "?".to_string(),
+                Some(x) => x.to_string(),
             };
             let progress_str = match current_view {
                 CurrentView::UserAnime | CurrentView::UserManga => {
                     format!("{}/{} ", progress, total)
                 }
-                CurrentView::BrowseAnime | CurrentView::BrowseManga => format!("{} ",total.to_string()),
+                CurrentView::BrowseAnime | CurrentView::BrowseManga => {
+                    format!("{} ", {
+                        match item.average_score {
+                            Some(score) => score.to_string(),
+                            _ => "".to_string(),
+                        }
+                    })
+                }
             };
 
             let airing_str = if let Some(ref airing) = item.next_airing_episode {
@@ -62,13 +69,18 @@ pub fn draw(
     let header_row = Row::new(vec![
         Cell::from(""),
         Cell::from("Title"),
-        Cell::from("Next episode"),
-        Cell::from(Line::from(match current_view {
-            CurrentView::UserAnime | CurrentView::UserManga => "Progress ",
-            CurrentView::BrowseAnime => "Episodes ",
-            CurrentView::BrowseManga => "Chapters "
-        }).right_aligned())
-        
+        Cell::from(match current_view {
+            CurrentView::UserAnime | CurrentView::BrowseAnime => "Next Episode",
+            CurrentView::UserManga | CurrentView::BrowseManga => "",
+        }),
+        Cell::from(
+            Line::from(match current_view {
+                CurrentView::UserAnime | CurrentView::UserManga => "Progress ",
+                CurrentView::BrowseAnime => "Avg score ",
+                CurrentView::BrowseManga => "Avg score ",
+            })
+            .right_aligned(),
+        ),
     ])
     .style(
         Style::default()
@@ -81,9 +93,9 @@ pub fn draw(
         rows,
         [
             Constraint::Length(3),
-            Constraint::Min(20),
+            Constraint::Fill(10),
             Constraint::Length(21),
-            Constraint::Length(11),
+            Constraint::Length(12),
         ],
     )
     .header(header_row)
@@ -99,7 +111,7 @@ pub fn draw(
             .title(Line::from(title_spans).centered())
             .title_bottom(Line::from(page_info).centered()),
     )
-    .highlight_symbol(">> ")
+    // .highlight_symbol(">> ")
     .row_highlight_style(Style::default().yellow());
 
     frame.render_stateful_widget(table_widget, area, state);

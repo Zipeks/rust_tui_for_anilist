@@ -48,8 +48,8 @@ pub fn handle_center_events(
             app.error_message = None;
         }
 
-        KeyCode::Char('[') | KeyCode::Char(']') => {
-            if key.code == KeyCode::Char('[') {
+        KeyCode::Char('[') | KeyCode::Char(']') | KeyCode::BackTab | KeyCode::Tab => {
+            if key.code == KeyCode::Char('[') || key.code == KeyCode::BackTab {
                 app.browse_state.current_category = app.browse_state.current_category.previous();
             } else {
                 app.browse_state.current_category = app.browse_state.current_category.next();

@@ -166,6 +166,9 @@ impl App {
         per_page: Option<i64>,
         graphql_type: get_user_media_list::MediaType,
     ) {
+        if self.is_loading {
+            return;
+        }
         let user_id = self.user.as_ref().map(|u| u.id).unwrap_or(0);
         self.is_loading = true;
         self.error_message = None;
@@ -304,6 +307,9 @@ impl App {
         search: Option<String>,
         format: Option<get_media::MediaFormat>,
     ) {
+        if self.is_loading {
+            return;
+        }
         self.is_loading = true;
         self.error_message = None;
 
