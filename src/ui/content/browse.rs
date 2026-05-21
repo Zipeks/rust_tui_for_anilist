@@ -99,5 +99,6 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
         title_spans,
         page_info,
         app.current_view,
+        &app.title_language
     );
 }

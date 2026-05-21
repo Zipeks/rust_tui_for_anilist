@@ -3,9 +3,9 @@ mod footer;
 mod header;
 mod main_frame;
 mod sidebar;
-
+use content::language_popup;
 use crate::app::App;
-use ratatui::prelude::*;
+use ratatui::{prelude::*, widgets::{Block, Borders}};
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -22,4 +22,29 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
     main_frame::draw(frame, chunks[1], app);
 
     footer::draw(frame, chunks[2], app);
+
+    if app.show_language_popup {
+        language_popup::draw(frame, app);
+    }
+
+}
+
+pub fn centered_rect(width: u16, height: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(r.height.saturating_sub(height) / 2),
+            Constraint::Length(height),
+            Constraint::Min(r.height.saturating_sub(height) / 2),
+        ])
+        .split(r);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Min(r.width.saturating_sub(width) / 2),
+            Constraint::Length(width),
+            Constraint::Min(r.width.saturating_sub(width) / 2),
+        ])
+        .split(popup_layout[1])[1]
 }

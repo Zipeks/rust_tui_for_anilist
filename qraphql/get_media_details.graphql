@@ -17,7 +17,10 @@ query GetMediaDetails($mediaId: Int!, $type: MediaType!, $format: ScoreFormat) {
     siteUrl
     status
     title {
-      userPreferred
+        romaji
+        userPreferred
+        english
+        native
     }
     type
     volumes

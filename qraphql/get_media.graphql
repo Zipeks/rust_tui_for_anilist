@@ -30,6 +30,9 @@ query GetMedia(
             id
             title {
                 userPreferred
+                romaji
+                english
+                native
             }
             type
             episodes

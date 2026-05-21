@@ -16,8 +16,7 @@ use std::time::Duration;
 
 use crate::anilist::{get_media, get_user_media_list};
 use crate::app_helper_structs::{
-    ActiveBlock, BrowseCategory, BrowseState, CurrentView, MediaDetails, MediaListItem, MediaType,
-    NextAiringEpisode, PageInfo, Season, User, UserMediaList,
+    ActiveBlock, BrowseCategory, BrowseState, CurrentView, MediaDetails, MediaListItem, MediaType, NextAiringEpisode, PageInfo, Season, TitleLanguage, User, UserMediaList
 };
 
 pub struct App {
@@ -36,6 +35,10 @@ pub struct App {
     pub currently_fetching_image: Option<i64>,
 
     pub media_details: Option<MediaDetails>,
+    pub title_language: TitleLanguage,
+
+    pub show_language_popup: bool,
+    pub language_popup_index: usize,
 }
 
 impl App {
@@ -63,6 +66,10 @@ impl App {
             image_cache: HashMap::new(),
             currently_fetching_image: None,
             media_details: None,
+            title_language: TitleLanguage::UserPreferred,
+            show_language_popup: false,
+            language_popup_index: 0,
+
         }
     }
 
@@ -201,8 +208,7 @@ impl App {
                 app.is_loading = false;
                 match timeout_result {
                     Ok(Ok(data)) => {
-                        let clean_list = UserMediaList::from(data);
-
+                        let clean_list= UserMediaList::from(data);
                         app.browse_state.media = Some(clean_list);
                         app.browse_state.state.select_first();
                     }
@@ -483,6 +489,10 @@ where
 
             if key.code == KeyCode::Char('q') {
                 return Ok(true);
+            }
+            if app.show_language_popup {
+                keybinds::handle_language_popup_events(app, key);
+                continue;
             }
 
             match app.active_block {

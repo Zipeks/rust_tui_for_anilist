@@ -19,6 +19,9 @@ query GetUserMediaList(
                 id
                 title {
                     userPreferred
+                    romaji
+                    english
+                    native
                 }
                 type
                 episodes

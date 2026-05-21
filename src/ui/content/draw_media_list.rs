@@ -1,4 +1,4 @@
-use crate::app_helper_structs::{CurrentView, MediaListItem};
+use crate::app_helper_structs::{CurrentView, MediaListItem, TitleLanguage};
 use ratatui::{prelude::*, widgets::*};
 
 pub fn draw(
@@ -10,6 +10,7 @@ pub fn draw(
     title_spans: Vec<Span>,
     page_info: Span,
     current_view: CurrentView,
+    title_language: &TitleLanguage,
 ) {
     let now = chrono::Utc::now().timestamp();
 
@@ -54,12 +55,12 @@ pub fn draw(
             } else {
                 String::new()
             };
-
+            let display_title = item.titles.get_title(&title_language).to_string();
             let airing_cell = Cell::from(airing_str).style(Style::default().fg(Color::Magenta));
 
             Row::new(vec![
                 Cell::from(Span::styled(" ● ", Style::default().fg(Color::Cyan))),
-                Cell::from(item.title.clone()),
+                Cell::from(display_title),
                 airing_cell,
                 Cell::from(Line::from(progress_str).alignment(Alignment::Right))
                     .style(Style::default().fg(Color::Cyan)),
