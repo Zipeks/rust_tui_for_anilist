@@ -16,7 +16,8 @@ use std::time::Duration;
 
 use crate::anilist::{get_media, get_user_media_list};
 use crate::app_helper_structs::{
-    ActiveBlock, BrowseCategory, BrowseState, CurrentView, MediaDetails, MediaListItem, MediaType, NextAiringEpisode, PageInfo, Season, TitleLanguage, User, UserMediaList
+    ActiveBlock, BrowseCategory, BrowseState, CurrentView, MediaDetails, MediaListItem, MediaType,
+    NextAiringEpisode, PageInfo, Season, TitleLanguage, User, UserMediaList,
 };
 
 pub struct App {
@@ -69,7 +70,6 @@ impl App {
             title_language: TitleLanguage::UserPreferred,
             show_language_popup: false,
             language_popup_index: 0,
-
         }
     }
 
@@ -191,6 +191,7 @@ impl App {
 
         let client_clone = client.clone();
         let tx_clone = tx.clone();
+        let status_for_sort = status.clone();
 
         tokio::spawn(async move {
             let timeout_duration = Duration::from_secs(5);
@@ -208,7 +209,29 @@ impl App {
                 app.is_loading = false;
                 match timeout_result {
                     Ok(Ok(data)) => {
-                        let clean_list= UserMediaList::from(data);
+                        let mut clean_list = UserMediaList::from(data);
+                        if let Some(get_user_media_list::MediaListStatus::CURRENT) = status_for_sort
+                        {
+                            if let Some(ref mut items) = clean_list.items {
+                                items.sort_by(|a, b| {
+                                    match (&a.next_airing_episode, &b.next_airing_episode) {
+                                        (Some(ep_a), Some(ep_b)) => {
+                                            ep_a.airing_at.cmp(&ep_b.airing_at)
+                                        }
+
+                                        (Some(_), None) => std::cmp::Ordering::Less,
+
+                                        (None, Some(_)) => std::cmp::Ordering::Greater,
+
+                                        (None, None) => {
+                                            a.titles.get_title(&TitleLanguage::UserPreferred).cmp(
+                                                &b.titles.get_title(&TitleLanguage::UserPreferred),
+                                            )
+                                        }
+                                    }
+                                });
+                            }
+                        };
                         app.browse_state.media = Some(clean_list);
                         app.browse_state.state.select_first();
                     }
@@ -287,19 +310,25 @@ impl App {
                     _ => MediaType::Anime,
                 }
             },
-            match self.browse_state.current_category {
-                BrowseCategory::CategoryTwo => {
-                    Some(Utils::get_season().to_get_media_media_season())
-                }
-                BrowseCategory::CategoryThree => {
-                    Some(Utils::get_season().next().to_get_media_media_season())
-                }
+            match self.current_view {
+                CurrentView::BrowseAnime => match self.browse_state.current_category {
+                    BrowseCategory::CategoryTwo => {
+                        Some(Utils::get_season().to_get_media_media_season())
+                    }
+                    BrowseCategory::CategoryThree => {
+                        Some(Utils::get_season().next().to_get_media_media_season())
+                    }
+                    _ => None,
+                },
                 _ => None,
             },
-            match self.browse_state.current_category {
-                BrowseCategory::CategoryTwo | BrowseCategory::CategoryThree => {
-                    Some(Utils::get_year())
-                }
+            match self.current_view {
+                CurrentView::BrowseAnime => match self.browse_state.current_category {
+                    BrowseCategory::CategoryTwo | BrowseCategory::CategoryThree => {
+                        Some(Utils::get_year())
+                    }
+                    _ => None,
+                },
                 _ => None,
             },
             None,
@@ -367,6 +396,7 @@ impl App {
             let _ = tx_clone.send(action);
         });
     }
+
     pub fn fetch_media_details(
         &mut self,
         client: crate::anilist::AnilistClient,

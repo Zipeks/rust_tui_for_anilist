@@ -2,6 +2,7 @@ use graphql_client::{GraphQLQuery, Response};
 use moka::future::Cache;
 use reqwest::{Client, header};
 use std::{error::Error, time::Duration};
+use tracing::info;
 
 use crate::app_helper_structs::MediaType;
 
@@ -123,7 +124,15 @@ impl AnilistClient {
 
         let request_body = GetUserMediaList::build_query(variables);
 
-        let json_body = serde_json::to_value(&request_body)?;
+        let mut json_body = serde_json::to_value(&request_body)?;
+
+        if let Some(vars) = json_body
+            .get_mut("variables")
+            .and_then(|v| v.as_object_mut())
+        {
+            vars.retain(|_, v| !v.is_null());
+        }
+
         let cache_key = json_body.to_string();
 
         if let Some(cached_response) = self.cache.get(&cache_key).await {
@@ -139,7 +148,7 @@ impl AnilistClient {
         let res = self
             .http_client
             .post(self.api_url)
-            .json(&request_body)
+            .json(&json_body)
             .send()
             .await?;
 

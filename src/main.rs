@@ -11,7 +11,8 @@ use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::{EnterAlternateScreen, enable_raw_mode};
 use ratatui::crossterm::terminal::{LeaveAlternateScreen, disable_raw_mode};
 use std::{env, io};
-
+use tracing::info;
+use tracing_subscriber::EnvFilter;
 mod anilist;
 mod app;
 mod app_helper_structs;
@@ -21,6 +22,8 @@ mod utils;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
+    let _guard = init_tracing();
+
     enable_raw_mode()?;
     let mut stderr = io::stderr();
     execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
@@ -45,4 +48,17 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         DisableMouseCapture
     )?;
     Ok(())
+}
+fn init_tracing() -> tracing_appender::non_blocking::WorkerGuard {
+    let file_appender = tracing_appender::rolling::daily("logs", "anilist_tui.log");
+
+    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
+        .with_writer(non_blocking)
+        .with_ansi(false)
+        .init();
+
+    guard
 }

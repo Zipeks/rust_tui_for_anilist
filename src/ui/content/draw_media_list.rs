@@ -94,8 +94,8 @@ pub fn draw(
         rows,
         [
             Constraint::Length(3),
-            Constraint::Fill(10),
-            Constraint::Length(21),
+            Constraint::Min(30),
+            Constraint::Max(21),
             Constraint::Length(12),
         ],
     )

@@ -172,10 +172,13 @@ impl From<get_media::ResponseData> for UserMediaList {
             if let Some(media_array) = page.media {
                 for m in media_array.into_iter().flatten() {
                     let id = m.id;
-                    
+
                     let titles = if let Some(t) = m.title.as_ref() {
                         Titles {
-                            user_preferred: t.user_preferred.clone().unwrap_or_else(|| "Unknown".to_string()),
+                            user_preferred: t
+                                .user_preferred
+                                .clone()
+                                .unwrap_or_else(|| "Unknown".to_string()),
                             romaji: t.romaji.clone().unwrap_or_default(),
                             english: t.english.clone().unwrap_or_default(),
                             native: t.native.clone().unwrap_or_default(),
@@ -245,7 +248,10 @@ impl From<get_user_media_list::ResponseData> for UserMediaList {
                     let id = m.media.as_ref().map(|x| x.id).unwrap_or(0);
                     let titles = if let Some(t) = m.media.as_ref().and_then(|x| x.title.as_ref()) {
                         Titles {
-                            user_preferred: t.user_preferred.clone().unwrap_or_else(|| "Unknown".to_string()),
+                            user_preferred: t
+                                .user_preferred
+                                .clone()
+                                .unwrap_or_else(|| "Unknown".to_string()),
                             romaji: t.romaji.clone().unwrap_or_default(),
                             english: t.english.clone().unwrap_or_default(),
                             native: t.native.clone().unwrap_or_default(),
@@ -259,15 +265,14 @@ impl From<get_user_media_list::ResponseData> for UserMediaList {
                         }
                     };
 
-
-
-
                     let mut total = None;
-                    let type_ = m.media.as_ref()
-                        .and_then(|med| med.type_.clone()) 
+                    let type_ = m
+                        .media
+                        .as_ref()
+                        .and_then(|med| med.type_.clone())
                         .map(MediaType::from)
                         .unwrap_or(MediaType::Unknown);
-                    
+
                     if let Some(m) = &m.media {
                         total = m.episodes.or(m.chapters);
                     };
@@ -294,18 +299,6 @@ impl From<get_user_media_list::ResponseData> for UserMediaList {
                 }
             }
         }
-
-        items.sort_by(|a, b| {
-            match (&a.next_airing_episode, &b.next_airing_episode) {
-                (Some(ep_a), Some(ep_b)) => ep_a.airing_at.cmp(&ep_b.airing_at),
-
-                (Some(_), None) => std::cmp::Ordering::Less,
-
-                (None, Some(_)) => std::cmp::Ordering::Greater,
-
-                (None, None) => a.titles.get_title(&TitleLanguage::UserPreferred).cmp(&b.titles.get_title(&TitleLanguage::UserPreferred)),
-            }
-        });
 
         UserMediaList {
             page_info,
@@ -358,13 +351,25 @@ impl Titles {
         match language {
             TitleLanguage::UserPreferred => &self.user_preferred,
             TitleLanguage::Romaji => {
-                if !self.romaji.is_empty() { &self.romaji } else { &self.user_preferred }
+                if !self.romaji.is_empty() {
+                    &self.romaji
+                } else {
+                    &self.user_preferred
+                }
             }
             TitleLanguage::English => {
-                if !self.english.is_empty() { &self.english } else { &self.romaji }
+                if !self.english.is_empty() {
+                    &self.english
+                } else {
+                    &self.romaji
+                }
             }
             TitleLanguage::Native => {
-                if !self.native.is_empty() { &self.native } else { &self.romaji }
+                if !self.native.is_empty() {
+                    &self.native
+                } else {
+                    &self.romaji
+                }
             }
         }
     }

@@ -3,9 +3,12 @@ mod footer;
 mod header;
 mod main_frame;
 mod sidebar;
-use content::language_popup;
 use crate::app::App;
-use ratatui::{prelude::*, widgets::{Block, Borders}};
+use content::language_popup;
+use ratatui::{
+    prelude::*,
+    widgets::{Block, Borders},
+};
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -26,7 +29,6 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
     if app.show_language_popup {
         language_popup::draw(frame, app);
     }
-
 }
 
 pub fn centered_rect(width: u16, height: u16, r: Rect) -> Rect {
