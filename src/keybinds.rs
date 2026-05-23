@@ -70,7 +70,7 @@ pub fn handle_center_events(
 
         KeyCode::Char('j') | KeyCode::Down => app.next_center_item(),
         KeyCode::Char('k') | KeyCode::Up => app.previous_center_item(),
-        KeyCode::Enter | KeyCode::Char('l') => {
+        KeyCode::Enter | KeyCode::Char('l') | KeyCode::Right => {
             if let Some(selected_index) = app.browse_state.state.selected() {
                 let current_items = app.get_current_center_items();
 

@@ -499,7 +499,7 @@ pub struct UserMediaDetails {
     pub status: UserMediaStatus,
 }
 pub struct MediaDetails {
-    pub title: String,
+    pub titles: Titles,
     pub description: String,
     pub average_score: i64,
     pub total: Option<i64>,
@@ -514,18 +514,32 @@ impl From<get_media_details::ResponseData> for MediaDetails {
     fn from(data: get_media_details::ResponseData) -> Self {
         let media = data.media;
 
-        let title = media
-            .as_ref()
-            .and_then(|m| m.title.as_ref())
-            .and_then(|t| t.user_preferred.clone())
-            .unwrap_or_else(|| "Unknown Title".to_string());
+        let titles = if let Some(t) = media.as_ref().and_then(|x| x.title.as_ref()) {
+            Titles {
+                user_preferred: t
+                    .user_preferred
+                    .clone()
+                    .unwrap_or_else(|| "Unknown".to_string()),
+                romaji: t.romaji.clone().unwrap_or_default(),
+                english: t.english.clone().unwrap_or_default(),
+                native: t.native.clone().unwrap_or_default(),
+            }
+        } else {
+            Titles {
+                user_preferred: "Unknown".to_string(),
+                romaji: "".to_string(),
+                english: "".to_string(),
+                native: "".to_string(),
+            }
+        };
 
         let average_score = media.as_ref().and_then(|m| m.average_score).unwrap_or(0);
 
         let description = media
             .as_ref()
             .and_then(|m| m.description.clone())
-            .unwrap_or_else(|| "No description available.".to_string());
+            .unwrap_or_else(|| "No description available.".to_string())
+            .replace("<br>", "\n");
 
         let total = media.as_ref().and_then(|m| m.chapters.or(m.episodes));
 
@@ -568,7 +582,7 @@ impl From<get_media_details::ResponseData> for MediaDetails {
         }
 
         MediaDetails {
-            title,
+            titles,
             description,
             average_score,
             total,

@@ -432,13 +432,20 @@ impl App {
             let timeout_duration = Duration::from_secs(5);
             let fetch_future = client_clone.get_media_details(media_id, media_type);
             let timeout_result = tokio::time::timeout(timeout_duration, fetch_future).await;
-
+            
+            let tx_for_action = tx_clone.clone();
             let action: AppAction = Box::new(move |app: &mut App| {
                 app.is_loading = false;
 
                 match timeout_result {
                     Ok(Ok(data)) => {
                         let media_details = MediaDetails::from(data);
+                        
+                        let cover_url = &media_details.cover_image;
+                        if !cover_url.is_empty() {
+                            app.fetch_cover(media_id, cover_url.clone(), tx_for_action);
+                        }
+
                         app.media_details = Some(media_details);
                     }
                     Ok(Err(api_error)) => {
