@@ -7,7 +7,6 @@ use crate::app::App;
 use content::language_popup;
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders},
 };
 
 pub fn ui(frame: &mut Frame, app: &mut App) {

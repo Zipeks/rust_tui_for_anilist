@@ -45,7 +45,7 @@ impl App {
     pub fn new() -> App {
         let mut state = ListState::default();
         state.select(Some(0));
-        let mut picker = Picker::from_query_stdio().unwrap_or_else(|_| Picker::halfblocks());
+        let picker = Picker::from_query_stdio().unwrap_or_else(|_| Picker::halfblocks());
         App {
             active_block: ActiveBlock::Sidebar,
             current_view: CurrentView::UserAnime,

@@ -1,6 +1,6 @@
 use crate::{
     app::App,
-    app_helper_structs::{ActiveBlock, MediaType, TitleLanguage},
+    app_helper_structs::{ActiveBlock, MediaType},
 };
 use ratatui::{prelude::*, widgets::*};
 use ratatui_image::StatefulImage;

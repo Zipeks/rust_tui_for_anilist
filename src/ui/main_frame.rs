@@ -2,11 +2,11 @@ use crate::{
     app::App,
     app_helper_structs::ActiveBlock,
     ui::{
-        content::{self, browse, details},
+        content::{browse, details},
         sidebar,
     },
 };
-use ratatui::{layout::Spacing, prelude::*, widgets::*};
+use ratatui::{prelude::*, widgets::*};
 
 pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
     let main_block = Block::default()

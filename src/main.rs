@@ -1,8 +1,7 @@
 use crate::anilist::AnilistClient;
 use std::error::Error;
-
+use std::ops::Deref;
 use crate::app::{App, run_app};
-use dotenv::dotenv;
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 use ratatui::crossterm::event::DisableMouseCapture;
@@ -10,19 +9,45 @@ use ratatui::crossterm::event::EnableMouseCapture;
 use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::{EnterAlternateScreen, enable_raw_mode};
 use ratatui::crossterm::terminal::{LeaveAlternateScreen, disable_raw_mode};
-use std::{env, io};
-use tracing::info;
+use std::{io};
 use tracing_subscriber::EnvFilter;
+
 mod anilist;
 mod app;
 mod app_helper_structs;
 mod keybinds;
 mod ui;
 mod utils;
+mod auth;
 
+const CLIENT_ID: &str = "40678";
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     let _guard = init_tracing();
+
+    auth::clear_user_token();
+    let token = auth::load_user_token();
+
+    let anilist_token = match token {
+        Some(t) => t,
+        None => {
+            println!("Authorization token not found.");
+            println!("Logging in with your browser...");
+
+            let new_token = auth::login_with_browser(CLIENT_ID).await;
+            
+            match new_token {
+                Ok(s) =>  {
+                    let _ = auth::save_user_token(&s);
+                    s
+                }
+                Err(e) => {
+                    println!("Something went wrong during authorization: {}", e);
+                    return Ok(());
+                }
+            }
+        }
+    };
 
     enable_raw_mode()?;
     let mut stderr = io::stderr();
@@ -33,9 +58,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     let mut app = App::new();
 
-    dotenv().ok();
-    let anilist_token = env::var("ANILIST_TOKEN").ok();
-    let client = AnilistClient::new(anilist_token.as_deref())?;
+    let client = AnilistClient::new(Some(anilist_token.deref()))?;
 
     let (tx, rx) = std::sync::mpsc::channel();
 

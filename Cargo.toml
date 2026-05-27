@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-dotenv = "0.15.0"
 graphql_client = "0.16.0"
 ratatui = "0.30.0"
 reqwest = {version="0.13.3", features = ["blocking", "json"]}
@@ -18,3 +17,6 @@ image = "0.25.10"
 tracing = "0.1.44"
 tracing-subscriber = {version = "0.3.23", features = ["env-filter"]}
 tracing-appender = "0.2.5"
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
+open = "5.3.5"
+axum = "0.8.9"
