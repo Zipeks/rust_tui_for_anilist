@@ -25,7 +25,6 @@ const CLIENT_ID: &str = "40678";
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     let _guard = init_tracing();
 
-    auth::clear_user_token();
     let token = auth::load_user_token();
 
     let anilist_token = match token {
