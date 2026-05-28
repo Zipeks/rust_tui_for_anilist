@@ -3,11 +3,9 @@ mod footer;
 mod header;
 mod main_frame;
 mod sidebar;
-use crate::app::App;
+use crate::{app::App, ui::content::error_popup};
 use content::language_popup;
-use ratatui::{
-    prelude::*,
-};
+use ratatui::prelude::*;
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -27,6 +25,10 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
 
     if app.show_language_popup {
         language_popup::draw(frame, app);
+    }
+
+    if let Some(error_message) = &app.error_message {
+        error_popup::draw(frame, app, error_message.clone());
     }
 }
 

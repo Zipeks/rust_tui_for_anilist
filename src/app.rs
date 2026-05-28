@@ -1,6 +1,6 @@
-use crate::keybinds;
 use crate::ui::ui;
 use crate::utils::Utils;
+use crate::{auth, keybinds};
 use ratatui::Terminal;
 use ratatui::backend::Backend;
 use ratatui::crossterm::event::{self};
@@ -9,6 +9,7 @@ use ratatui::widgets::{ListState, TableState};
 use ratatui_image::picker::Picker;
 use ratatui_image::protocol::StatefulProtocol;
 use std::collections::HashMap;
+use std::fmt::format;
 use std::io;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
@@ -529,6 +530,11 @@ where
             if key.code == KeyCode::Char('q') {
                 return Ok(true);
             }
+
+            if let Some(_) = app.error_message {
+                keybinds::handle_error_popup_events(app, key);
+            }
+
             if app.show_language_popup {
                 keybinds::handle_language_popup_events(app, key);
                 continue;
@@ -554,18 +560,23 @@ fn spawn_initial_viewer_fetch(client: crate::anilist::AnilistClient, tx: Sender<
     let tx_clone = tx.clone();
 
     tokio::spawn(async move {
-        let timeout_duration = Duration::from_secs(5);
+        let timeout_duration = Duration::from_secs(2);
         let fetch_future = client_clone.get_basic_viewer();
 
         let timeout_result = tokio::time::timeout(timeout_duration, fetch_future).await;
-        let action: AppAction = Box::new(move |app: &mut App| {
-            if let Ok(Ok(data)) = timeout_result {
+        let action: AppAction = Box::new(move |app: &mut App| match timeout_result {
+            Ok(Ok(data)) => {
                 if let Some(viewer) = data.viewer {
                     let allows_nsfw = viewer.options.and_then(|o| o.display_adult_content);
 
                     app.authenticated(viewer.id, viewer.name, allows_nsfw);
                 }
             }
+            Ok(Err(data)) => {
+                app.error_message = Some(format!("Error connecting to Anilist: {}", data));
+                _ = auth::clear_user_token();
+            }
+            Err(data) => app.error_message = Some(format!("Error connecting to Anilist: {}", data)),
         });
 
         let _ = tx_clone.send(action);

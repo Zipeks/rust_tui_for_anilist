@@ -136,24 +136,29 @@ pub fn handle_details_events(
 }
 
 pub fn handle_language_popup_events(app: &mut App, key: KeyEvent) {
-    if app.show_language_popup {
-        match key.code {
-            KeyCode::Esc | KeyCode::Char('q') => app.show_language_popup = false,
+    match key.code {
+        KeyCode::Esc | KeyCode::Char('q') => app.show_language_popup = false,
 
-            KeyCode::Tab | KeyCode::Down | KeyCode::Char('j') => {
-                app.language_popup_index = (app.language_popup_index + 1) % 4;
-            }
-
-            KeyCode::BackTab | KeyCode::Up | KeyCode::Char('k') => {
-                app.language_popup_index = (app.language_popup_index + 3) % 4;
-            }
-
-            KeyCode::Enter => {
-                app.title_language =
-                    crate::app_helper_structs::TitleLanguage::ALL[app.language_popup_index];
-                app.show_language_popup = false;
-            }
-            _ => {}
+        KeyCode::Tab | KeyCode::Down | KeyCode::Char('j') => {
+            app.language_popup_index = (app.language_popup_index + 1) % 4;
         }
+
+        KeyCode::BackTab | KeyCode::Up | KeyCode::Char('k') => {
+            app.language_popup_index = (app.language_popup_index + 3) % 4;
+        }
+
+        KeyCode::Enter => {
+            app.title_language =
+                crate::app_helper_structs::TitleLanguage::ALL[app.language_popup_index];
+            app.show_language_popup = false;
+        }
+        _ => {}
+    }
+}
+
+pub fn handle_error_popup_events(app: &mut App, key: KeyEvent) {
+    match key.code {
+        KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter => app.error_message = None,
+        _ => {}
     }
 }

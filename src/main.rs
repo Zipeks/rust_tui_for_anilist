@@ -1,6 +1,4 @@
 use crate::anilist::AnilistClient;
-use std::error::Error;
-use std::ops::Deref;
 use crate::app::{App, run_app};
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
@@ -9,16 +7,18 @@ use ratatui::crossterm::event::EnableMouseCapture;
 use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::{EnterAlternateScreen, enable_raw_mode};
 use ratatui::crossterm::terminal::{LeaveAlternateScreen, disable_raw_mode};
-use std::{io};
+use std::error::Error;
+use std::io;
+use std::ops::Deref;
 use tracing_subscriber::EnvFilter;
 
 mod anilist;
 mod app;
 mod app_helper_structs;
+mod auth;
 mod keybinds;
 mod ui;
 mod utils;
-mod auth;
 
 const CLIENT_ID: &str = "40678";
 #[tokio::main]
@@ -34,9 +34,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
             println!("Logging in with your browser...");
 
             let new_token = auth::login_with_browser(CLIENT_ID).await;
-            
+
             match new_token {
-                Ok(s) =>  {
+                Ok(s) => {
                     let _ = auth::save_user_token(&s);
                     s
                 }

@@ -22,13 +22,7 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
     let inner_details_area = details_block.inner(area);
     frame.render_widget(details_block, area);
 
-    if let Some(ref err) = app.error_message {
-        let p = Paragraph::new(format!("❌ API error: {}", err))
-            .style(Style::default().fg(Color::Red))
-            .centered();
-        frame.render_widget(p, inner_details_area);
-        return;
-    } else if let Some(media_details) = &app.media_details {
+    if let Some(media_details) = &app.media_details {
         let media_type = media_details.type_;
         let vertical_chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -87,7 +81,7 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
 
         if media_details.is_favourite {
             title_spans.push(Span::styled("❤️ ", Style::default().fg(Color::Red)));
-            title_spans.push(Span::styled("• ", Style::default().fg(Color::DarkGray))); 
+            title_spans.push(Span::styled("• ", Style::default().fg(Color::DarkGray)));
         }
 
         title_spans.push(Span::styled(
@@ -98,7 +92,7 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
         ));
 
         let title_lines = vec![
-            Line::from(title_spans), 
+            Line::from(title_spans),
             Line::from(Span::styled(
                 alt_titles.join(" • "),
                 Style::default().fg(Color::DarkGray),

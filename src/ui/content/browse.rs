@@ -12,19 +12,6 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &mut App) {
         .constraints([Constraint::Min(0)])
         .split(area);
 
-    // if app.is_loading {
-    //     let p = Paragraph::new("⏳ Waiting for AniList...").centered();
-    //     frame.render_widget(p, area);
-    //     return;
-    // }
-    if let Some(ref err) = app.error_message {
-        let p = Paragraph::new(format!("❌ API error: {}", err))
-            .style(Style::default().fg(Color::Red))
-            .centered();
-        frame.render_widget(p, area);
-        return;
-    }
-
     let is_center_active = app.active_block == ActiveBlock::Center;
 
     let active_style = Style::default()
