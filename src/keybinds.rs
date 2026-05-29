@@ -211,13 +211,26 @@ pub fn handle_edit_media_popup_events(
                     match current_field {
                         CurrentEditField::EpisodeProgress => {
                             if let Some(digit) = c.to_digit(10) {
-                                media.progress = media.progress * 10 + (digit as i64);
+                                media.progress = (media.progress * 10 + (digit as i64)).clamp(
+                                    0,
+                                    app.media_details.as_ref().unwrap().total.unwrap_or(20000),
+                                );
                             }
                         }
                         CurrentEditField::VolumeProgress => {
                             if let Some(digit) = c.to_digit(10) {
                                 let vols = media.progress_volumes.unwrap_or(0);
-                                media.progress_volumes = Some(vols * 10 + (digit as i64));
+                                media.progress_volumes = Some(
+                                    vols * 10
+                                        + (digit as i64).clamp(
+                                            0,
+                                            app.media_details
+                                                .as_ref()
+                                                .unwrap()
+                                                .volumes
+                                                .unwrap_or(20000),
+                                        ),
+                                );
                             }
                         }
                         CurrentEditField::Score => {
@@ -227,7 +240,7 @@ pub fn handle_edit_media_popup_events(
                         }
                         CurrentEditField::Rewatch => {
                             if let Some(digit) = c.to_digit(10) {
-                                media.repeat = media.repeat * 10 + (digit as i64);
+                                media.repeat = media.repeat * 10 + (digit as i64).clamp(0, 10000);
                             }
                         }
                         CurrentEditField::StartDate => app.edit_start_date_text.push(c),
@@ -286,18 +299,24 @@ pub fn handle_edit_media_popup_events(
                             }
                         }
                         CurrentEditField::EpisodeProgress => {
-                            media.progress = (media.progress as i64 + step).max(0)
+                            media.progress = (media.progress as i64 + step).clamp(
+                                0,
+                                app.media_details.as_ref().unwrap().total.unwrap_or(20000),
+                            )
                         }
                         CurrentEditField::VolumeProgress => {
                             let mut vols = media.progress_volumes.unwrap_or(0);
-                            vols = (vols as i64 + step).max(0);
+                            vols = (vols as i64 + step).clamp(
+                                0,
+                                app.media_details.as_ref().unwrap().volumes.unwrap_or(20000),
+                            );
                             media.progress_volumes = Some(vols);
                         }
                         CurrentEditField::Score => {
                             media.score = (media.score + step as f64).clamp(0.0, 100.0)
                         }
                         CurrentEditField::Rewatch => {
-                            media.repeat = (media.repeat as i64 + step).max(0)
+                            media.repeat = (media.repeat as i64 + step).clamp(0, 100000)
                         }
                         _ => {}
                     }

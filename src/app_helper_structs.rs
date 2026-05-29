@@ -67,8 +67,8 @@ pub enum UserMediaStatus {
 }
 impl UserMediaStatus {
     pub const ALL: [UserMediaStatus; 6] = [
-        UserMediaStatus::Current,
         UserMediaStatus::Planning,
+        UserMediaStatus::Current,
         UserMediaStatus::Completed,
         UserMediaStatus::Dropped,
         UserMediaStatus::Paused,
